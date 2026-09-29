@@ -5,6 +5,7 @@ import Events from './pages/Events';
 import EventDetail from './pages/EventDetail';
 import Leaderboard from './pages/Leaderboard';
 import GameHistory from './pages/GameHistory';
+import Calendar from './pages/Calendar';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -21,6 +22,7 @@ function AppRoutes() {
         <Route index element={<Navigate to="/events" replace />} />
         <Route path="events" element={<Events />} />
         <Route path="events/:id" element={<EventDetail />} />
+        <Route path="calendar" element={<Calendar />} />
         <Route path="leaderboard" element={<Leaderboard />} />
         <Route path="history" element={<GameHistory />} />
       </Route>
