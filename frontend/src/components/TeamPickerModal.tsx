@@ -14,6 +14,7 @@ export default function TeamPickerModal({ players, onClose, onStarted, apiFetch,
   const names = players.map(p => p.username ?? p.Username ?? '').filter(Boolean);
   const [team1, setTeam1] = useState<string[]>([]);
   const [team2, setTeam2] = useState<string[]>([]);
+  const [duration, setDuration] = useState(15);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -41,7 +42,7 @@ export default function TeamPickerModal({ players, onClose, onStarted, apiFetch,
     try {
       await apiFetch(`/api/games/${eventId}/startgame`, {
         method: 'POST',
-        body: JSON.stringify({ team1, team2 }),
+        body: JSON.stringify({ team1, team2, durationMinutes: duration }),
       });
       onStarted();
       onClose();
@@ -115,13 +116,19 @@ export default function TeamPickerModal({ players, onClose, onStarted, apiFetch,
           </div>
         </div>
 
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--gray-700)', marginBottom: 16 }}>
+          Game length (minutes)
+          <input type="number" min={1} max={180} value={duration} onChange={e => setDuration(Number(e.target.value))}
+            style={{ width: 70, padding: '4px 8px' }} />
+        </label>
+
         {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 10 }}>{error}</div>}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
           <button
             type="button"
             className="btn btn-primary"
-            disabled={team1.length === 0 || team2.length === 0 || loading}
+            disabled={team1.length === 0 || team2.length === 0 || !(duration >= 1 && duration <= 180) || loading}
             onClick={handleStart}
           >{loading ? 'Starting...' : 'Start Game'}</button>
         </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { SubGame } from '../types';
+import { playScream, unlockAudio } from './scream';
 
-const ALERT_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
 
 function formatElapsed(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
@@ -15,9 +15,10 @@ function formatElapsed(ms: number): string {
 interface LiveGameTimerProps {
   subGame: SubGame;
   onEndGame: () => void;
+  isAdmin?: boolean;
 }
 
-export default function LiveGameTimer({ subGame, onEndGame }: LiveGameTimerProps) {
+export default function LiveGameTimer({ subGame, onEndGame, isAdmin }: LiveGameTimerProps) {
   const [elapsedMs, setElapsedMs] = useState(0);
 
   useEffect(() => {
@@ -31,7 +32,18 @@ export default function LiveGameTimer({ subGame, onEndGame }: LiveGameTimerProps
     return () => clearInterval(interval);
   }, [subGame.startedat, subGame.sgid]);
 
-  const overThreshold = elapsedMs >= ALERT_THRESHOLD_MS;
+  const thresholdMs = (subGame.durationminutes ?? 15) * 60 * 1000;
+  const overThreshold = elapsedMs >= thresholdMs;
+
+  useEffect(() => {
+    window.addEventListener('pointerdown', unlockAudio, { once: true });
+    return () => window.removeEventListener('pointerdown', unlockAudio);
+  }, []);
+
+  // Scream once when the timer crosses the threshold (not on mid-game page loads past it).
+  useEffect(() => {
+    if (overThreshold && elapsedMs < thresholdMs + 5000) playScream();
+  }, [overThreshold]);
 
   return (
     <div style={{
@@ -49,6 +61,12 @@ export default function LiveGameTimer({ subGame, onEndGame }: LiveGameTimerProps
       }}>
         {formatElapsed(elapsedMs)}
       </div>
+
+      {isAdmin && (
+        <button onClick={playScream} className="btn btn-secondary btn-lg">
+          Scream
+        </button>
+      )}
 
       <button onClick={onEndGame} className="btn btn-primary btn-lg">
         End Game
