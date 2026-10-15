@@ -40,6 +40,41 @@ export default function LiveGameTimer({ subGame, onEndGame, isAdmin }: LiveGameT
     return () => window.removeEventListener('pointerdown', unlockAudio);
   }, []);
 
+  // Keep the screen awake while a game is running. Browsers drop the lock whenever the
+  // tab is hidden, so request it again when the tab becomes visible. Unsupported browsers
+  // and insecure (plain http, non-localhost) pages simply skip this.
+  useEffect(() => {
+    if (!('wakeLock' in navigator)) return;
+    let lock: WakeLockSentinel | null = null;
+    let cancelled = false;
+
+    const requestLock = async () => {
+      if (lock && !lock.released) return;
+      try {
+        const sentinel = await navigator.wakeLock.request('screen');
+        if (cancelled) {
+          sentinel.release().catch(() => {});
+          return;
+        }
+        lock = sentinel;
+      } catch {
+        // Denied (e.g. battery saver) or not allowed here; the timer still works.
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') requestLock();
+    };
+
+    requestLock();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      lock?.release().catch(() => {});
+    };
+  }, []);
+
   // Scream once when the timer crosses the threshold (not on mid-game page loads past it).
   useEffect(() => {
     if (overThreshold && elapsedMs < thresholdMs + 5000) playScream();
