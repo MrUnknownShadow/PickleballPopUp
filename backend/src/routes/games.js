@@ -146,6 +146,7 @@ router.get("/:id/subgames", async (req, res) => {
         SubGames.StartedAt as startedat,
         SubGames.EndedAt as endedat,
         SubGames.Status as status,
+        SubGames.DurationMinutes as durationminutes,
         sgp.Team as team,
         Users.Username as username
       FROM SubGames
@@ -167,6 +168,7 @@ router.get("/:id/subgames", async (req, res) => {
           startedat: row.startedat,
           endedat: row.endedat,
           status: row.status,
+          durationminutes: row.durationminutes,
           team1: [],
           team2: [],
         };
@@ -299,12 +301,14 @@ router.post("/:id/startgame", async (req, res) => {
   try {
     const { team1, team2 } = req.body;
     const gameId = req.params.id;
+    const duration = parseInt(req.body.durationMinutes ?? 15, 10);
 
     if (!team1 || !team2) return res.status(400).json({ error: "Missing teams" });
+    if (!(duration >= 1 && duration <= 180)) return res.status(400).json({ error: "Duration must be 1-180 minutes" });
 
     const { rows: sgRows } = await db.query(
-      "INSERT INTO SubGames (GID, Status, StartedAt) VALUES ($1, 'in_progress', NOW()) RETURNING SGID",
-      [gameId]
+      "INSERT INTO SubGames (GID, Status, StartedAt, DurationMinutes) VALUES ($1, 'in_progress', NOW(), $2) RETURNING SGID",
+      [gameId, duration]
     );
     const sgid = sgRows[0].sgid;
 

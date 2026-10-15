@@ -50,6 +50,7 @@ export default function EventDetail() {
   const [scoringSubGame, setScoringSubGame] = useState<SubGame | null>(null);
   const [chatMsg, setChatMsg] = useState('');
   const [chatOpen, setChatOpen] = useState(false);
+  const [confirmEnd, setConfirmEnd] = useState(false);
 
   const load = async () => {
     if (!id) return;
@@ -90,7 +91,8 @@ export default function EventDetail() {
   };
 
   const handleEndSession = async () => {
-    if (!window.confirm(`End this session? ${subGames.filter(sg => sg.status === 'completed').length} games will be finalized.`)) return;
+    if (!confirmEnd) { setConfirmEnd(true); return; } // window.confirm is blocked in some webviews/PWAs
+    setConfirmEnd(false);
     try { await apiFetch(`/api/games/${id}/end`, { method: 'POST' }); show('Session ended!', 'success'); load(); }
     catch (err) { show(err instanceof Error ? err.message : 'Error', 'error'); }
   };
@@ -144,7 +146,7 @@ export default function EventDetail() {
   if (activeSubGame) {
     return (
       <>
-        <LiveGameTimer subGame={activeSubGame} onEndGame={() => setScoringSubGame(activeSubGame)} />
+        <LiveGameTimer subGame={activeSubGame} onEndGame={() => setScoringSubGame(activeSubGame)} isAdmin={isCreator} />
         {scoringSubGame && (
           <ScoreEntryModal
             subGame={scoringSubGame}
@@ -193,7 +195,7 @@ export default function EventDetail() {
                 + Start Game
               </button>
               <button className="btn btn-secondary btn-sm" onClick={handleEndSession}>
-                <Square size={13} /> End Session
+                <Square size={13} /> {confirmEnd ? 'Tap again to end' : 'End Session'}
               </button>
             </>
           )}

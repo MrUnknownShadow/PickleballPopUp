@@ -25,6 +25,7 @@ export interface SubGame {
   createdat: string;
   startedat?: string;
   endedat?: string;
+  durationminutes?: number;
   status?: 'not_started' | 'in_progress' | 'completed';
 }
 
