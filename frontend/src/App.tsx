@@ -6,6 +6,7 @@ import EventDetail from './pages/EventDetail';
 import Leaderboard from './pages/Leaderboard';
 import GameHistory from './pages/GameHistory';
 import Calendar from './pages/Calendar';
+import Settings from './pages/Settings';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -25,6 +26,7 @@ function AppRoutes() {
         <Route path="calendar" element={<Calendar />} />
         <Route path="leaderboard" element={<Leaderboard />} />
         <Route path="history" element={<GameHistory />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
   );

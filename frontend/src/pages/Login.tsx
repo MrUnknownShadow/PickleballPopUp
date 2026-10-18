@@ -186,6 +186,8 @@ export default function Login() {
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [smsOptIn, setSmsOptIn] = useState(false);
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -219,7 +221,7 @@ export default function Login() {
 
     try {
       if (mode === 'register') {
-        await register(name, pin);
+        await register(name, pin, phoneNumber, smsOptIn);
       } else {
         await login(name, pin);
       }
@@ -248,6 +250,8 @@ export default function Login() {
     setError('');
     setPin('');
     setConfirmPin('');
+    setPhoneNumber('');
+    setSmsOptIn(false);
   };
 
   return (
@@ -353,14 +357,28 @@ export default function Login() {
 
             {/* CONFIRM PIN ONLY WHEN REGISTERING */}
             {mode === 'register' && (
-              <FloatingInput
-                label="Confirm PIN"
-                type="password"
-                value={confirmPin}
-                onChange={setConfirmPin}
-                numeric
-                maxLength={4}
-              />
+              <>
+                <FloatingInput
+                  label="Confirm PIN"
+                  type="password"
+                  value={confirmPin}
+                  onChange={setConfirmPin}
+                  numeric
+                  maxLength={4}
+                />
+                <FloatingInput
+                  label="Phone number (optional)"
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={setPhoneNumber}
+                  numeric
+                  maxLength={15}
+                />
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 22, fontSize: 13, color: 'var(--gray-700)' }}>
+                  <input type="checkbox" checked={smsOptIn} onChange={e => setSmsOptIn(e.target.checked)} style={{ marginTop: 4, accentColor: 'var(--green)' }} />
+                  <span>Send me text notifications about my pickleball events.</span>
+                </label>
+              </>
             )}
 
             {/* ERROR */}
