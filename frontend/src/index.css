@@ -65,6 +65,8 @@ input, select, textarea { font-family: inherit; }
 .btn-pill::after { display: none; }
 
 .card { background: var(--white); border-radius: var(--radius-lg); box-shadow: none; border: 1.5px solid var(--line); }
+.settings-input { width: 100%; padding: 10px 12px; border: 1.5px solid var(--gray-300); border-radius: var(--radius-sm); background: var(--white); color: var(--charcoal); font-size: 14px; outline: none; }
+.settings-input:focus { border-color: var(--green); }
 .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 700; letter-spacing: 0.03em; }
 .badge-green { background: var(--green-light); color: var(--green-dark); }
 .badge-yellow { background: var(--yellow-light); color: var(--yellow-dark); }

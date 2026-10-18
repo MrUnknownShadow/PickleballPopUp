@@ -64,3 +64,12 @@ export interface ChatMessage {
   SentAt?: string;
   sentat?: string;
 }
+
+export interface UserProfile {
+  uid: number;
+  username: string;
+  email?: string | null;
+  phonenumber?: string | null;
+  smsoptin: boolean;
+  createdat: string;
+}

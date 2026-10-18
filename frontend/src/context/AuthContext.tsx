@@ -12,7 +12,7 @@ const API_BASE =
 interface AuthContextType {
   username: string | null;
   login: (name: string, pin: string) => Promise<void>;
-  register: (name: string, pin: string) => Promise<void>;
+  register: (name: string, pin: string, phoneNumber: string, smsOptIn: boolean) => Promise<void>;
   logout: () => void;
   apiFetch: <T = unknown>(
     path: string,
@@ -35,7 +35,9 @@ export function AuthProvider({
     async (
       endpoint: 'login' | 'register',
       name: string,
-      pin: string
+      pin: string,
+      phoneNumber = '',
+      smsOptIn = false
     ) => {
       const trimmed = name.trim().toLowerCase();
 
@@ -49,6 +51,8 @@ export function AuthProvider({
           body: JSON.stringify({
             username: trimmed,
             pin,
+            phoneNumber,
+            smsOptIn,
           }),
         }
       );
@@ -77,8 +81,8 @@ export function AuthProvider({
   );
 
   const register = useCallback(
-    async (name: string, pin: string) => {
-      await authenticate('register', name, pin);
+    async (name: string, pin: string, phoneNumber: string, smsOptIn: boolean) => {
+      await authenticate('register', name, pin, phoneNumber, smsOptIn);
     },
     [authenticate]
   );
