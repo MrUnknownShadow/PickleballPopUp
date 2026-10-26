@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, CalendarDays, Trophy, ClipboardList, Settings as SettingsIcon, Menu, X, LogOut } from 'lucide-react';
+import { Calendar, CalendarDays, Trophy, ClipboardList, Settings as SettingsIcon, MessageSquare, Menu, X, LogOut } from 'lucide-react';
 
-const navItems = [
+const baseNavItems = [
   { to: '/events', label: 'Events', icon: Calendar },
   { to: '/calendar', label: 'Calendar', icon: CalendarDays },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
@@ -12,10 +12,11 @@ const navItems = [
 ];
 
 export default function Layout() {
-  const { username, logout } = useAuth();
+  const { username, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const navItems = isAdmin ? [...baseNavItems, { to: '/admin', label: 'Admin', icon: MessageSquare }] : baseNavItems;
   const handleLogout = () => { logout(); navigate('/login'); };
   const initials = username ? username.slice(0, 2).toUpperCase() : '?';
 

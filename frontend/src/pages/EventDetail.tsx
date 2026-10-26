@@ -57,7 +57,7 @@ export default function EventDetail() {
     setLoading(true);
     try {
       const [eventsData, playersData, subGamesData, chatData] = await Promise.all([
-        apiFetch<Game[]>('/api/games'),
+        apiFetch<Game[]>(`/api/games?username=${username}`),
         apiFetch<Player[]>(`/api/games/${id}/players`),
         apiFetch<SubGame[]>(`/api/games/${id}/subgames`),
         apiFetch<ChatMessage[]>(`/api/games/${id}/chat`),

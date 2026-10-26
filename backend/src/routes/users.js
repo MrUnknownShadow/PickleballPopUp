@@ -2,6 +2,10 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const db = require("../db");
 
+const { createSession } = require("../auth");
+const { validTwilioSignature } = require("../sms");
+const { handleReply } = require("../notify");
+
 const router = express.Router();
 
 function validPin(pin) {
@@ -172,6 +176,7 @@ router.delete("/:username", async (req, res) => {
 /* SMS PROVIDER WEBHOOK: STOP immediately revokes consent. */
 router.post("/sms/inbound", async (req, res) => {
   try {
+    if (!validTwilioSignature(req)) return res.status(403).json({ error: "Bad signature" });
     const from = normalizePhoneNumber(req.body.from || req.body.From);
     const body = String(req.body.body || req.body.Body || "").trim().toUpperCase();
 
@@ -182,6 +187,8 @@ router.post("/sms/inbound", async (req, res) => {
          WHERE PhoneNumber = $1`,
         [from]
       );
+    } else if (from) {
+      await handleReply(from, String(req.body.body || req.body.Body || ""));
     }
 
     res.status(204).send();
@@ -203,7 +210,7 @@ router.post("/login", async (req, res) => {
     }
 
     const { rows } = await db.query(
-      `SELECT UID, Username, PinHash
+      `SELECT UID, Username, PinHash, IsAdmin
        FROM Users
        WHERE LOWER(Username) = LOWER($1)`,
       [username]
@@ -231,6 +238,8 @@ router.post("/login", async (req, res) => {
     res.json({
       uid: user.uid,
       username: user.username,
+      isAdmin: user.isadmin,
+      token: await createSession(user.uid),
     });
   } catch (e) {
     console.error("Login error:", e);

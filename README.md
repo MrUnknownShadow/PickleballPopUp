@@ -175,3 +175,29 @@ Hosting for the sponsor's setup has not been decided yet. The previous Render de
 - `DELETE /api/games/reset` is unprotected: anyone who can reach the API can wipe all data.
 - The leaderboard and history only include games from sessions that have been ended.
 - Screen Wake Lock only works on HTTPS or `localhost`, so it does nothing if the app is opened over a plain-http LAN address.
+
+---
+
+## Text Messaging (SMS)
+
+Scheduling runs on text messages sent through Twilio. The website is the admin's control panel (Admin tab).
+
+**Flow:** admin picks players and asks availability (now, or queued for Sunday) -> players reply YES / NO by text -> admin confirms the final roster (players picked are told they are in, others are told they are out and no longer see the event) -> admin sends the schedule (lists everyone playing) -> a reminder goes out automatically within 24 hours of the game. Every text can carry a custom admin comment. Players who text STOP are opted out.
+
+**Setup (backend/.env):**
+```
+TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_FROM_NUMBER=+1XXXXXXXXXX
+PUBLIC_BASE_URL=https://your-api.onrender.com   # used to verify Twilio webhook signatures
+SMS_DRY_RUN=1                                   # log texts instead of sending (dev/testing)
+```
+With no Twilio keys, or with `SMS_DRY_RUN=1`, texts are only logged and shown in the Admin tab's text log.
+
+**Twilio webhook:** point the number's incoming-message webhook (HTTP POST) at `https://your-api.onrender.com/api/users/sms/inbound`.
+
+**Make someone an admin:** `node scripts/make-admin.js <username>` (run from `backend/`). Admin routes require a login token.
+
+**Checks:** with the server running as `TZ=UTC SMS_DRY_RUN=1 node server.js`, run `node scripts/check-sms-flow.js http://localhost:3001` for an end-to-end test of the whole text flow. `node scripts/send-test-sms.js +1XXXXXXXXXX "text"` sends one real text. Note the Twilio free trial only allows preset template bodies.
+
+**Limits:** US carriers require 10DLC registration before real texts reach players reliably. Game times are stored without a timezone, so the server timezone should match the players' (or reminders will be off by the difference).

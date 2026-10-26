@@ -118,7 +118,8 @@ function EventTile({ event }: { event: Game }) {
 }
 
 export default function Events() {
-  const { data: events, loading, error, refetch } = useApi<Game[]>('/api/games');
+  const { username } = useAuth();
+  const { data: events, loading, error, refetch } = useApi<Game[]>(`/api/games?username=${username}`);
   const [showCreate, setShowCreate] = useState(false);
   const { show, Notification } = useNotification();
 

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { useApi } from '../hooks/useApi';
+import { useAuth } from '../context/AuthContext';
 import type { Game } from '../types';
 
 const monthFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
@@ -35,7 +36,8 @@ function isSameDay(left: Date, right: Date): boolean {
 }
 
 export default function Calendar() {
-  const { data: events, loading, error } = useApi<Game[]>('/api/games');
+  const { username } = useAuth();
+  const { data: events, loading, error } = useApi<Game[]>(`/api/games?username=${username}`);
   const [visibleMonth, setVisibleMonth] = useState(() => new Date());
   const today = new Date();
   const days = useMemo(() => buildCalendarDays(visibleMonth), [visibleMonth]);

@@ -6,7 +6,16 @@ const router = express.Router();
 /* GET ALL EVENTS */
 router.get("/", async (req, res) => {
   try {
-    const { rows } = await db.query("SELECT * FROM Games ORDER BY GameTime DESC");
+    // With ?username=, hide events the player declined or was not selected for.
+    const username = String(req.query.username || "").trim().toLowerCase();
+    const { rows } = await db.query(
+      `SELECT * FROM Games WHERE NOT EXISTS (
+         SELECT 1 FROM GamePlayers JOIN Users ON Users.UID = GamePlayers.UID
+         WHERE GamePlayers.GID = Games.GID AND Users.Username = $1
+           AND GamePlayers.Status IN ('declined', 'not_selected'))
+       ORDER BY GameTime DESC`,
+      [username]
+    );
     res.json(rows);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -126,7 +135,7 @@ router.get("/:id/players", async (req, res) => {
       SELECT Users.Username
       FROM GamePlayers
       JOIN Users ON GamePlayers.UID = Users.UID
-      WHERE GamePlayers.GID = $1
+      WHERE GamePlayers.GID = $1 AND GamePlayers.Status IN ('joined', 'selected')
     `, [req.params.id]);
     res.json(rows);
   } catch (e) {
@@ -240,7 +249,9 @@ router.post("/:id/join", async (req, res) => {
     const user = rows[0];
 
     await db.query(
-      "INSERT INTO GamePlayers (GID, UID) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+      `INSERT INTO GamePlayers (GID, UID) VALUES ($1, $2)
+       ON CONFLICT (GID, UID) DO UPDATE SET Status = 'joined'
+       WHERE GamePlayers.Status IN ('queued', 'invited', 'declined')`,
       [gameId, user.uid]
     );
     res.json({ success: true });

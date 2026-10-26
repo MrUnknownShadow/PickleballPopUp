@@ -11,6 +11,7 @@ const API_BASE =
 
 interface AuthContextType {
   username: string | null;
+  isAdmin: boolean;
   login: (name: string, pin: string) => Promise<void>;
   register: (name: string, pin: string, phoneNumber: string, smsOptIn: boolean) => Promise<void>;
   logout: () => void;
@@ -29,6 +30,13 @@ export function AuthProvider({
 }) {
   const [username, setUsername] = useState<string | null>(
     () => localStorage.getItem('pb_username')
+  );
+
+  const [token, setToken] = useState<string | null>(
+    () => localStorage.getItem('pb_token')
+  );
+  const [isAdmin, setIsAdmin] = useState<boolean>(
+    () => localStorage.getItem('pb_admin') === '1'
   );
 
   const authenticate = useCallback(
@@ -67,8 +75,17 @@ export function AuthProvider({
         );
       }
 
+      const data = (await res.json().catch(() => ({}))) as {
+        token?: string;
+        isAdmin?: boolean;
+      };
       setUsername(trimmed);
+      setToken(data.token ?? null);
+      setIsAdmin(data.isAdmin === true);
       localStorage.setItem('pb_username', trimmed);
+      if (data.token) localStorage.setItem('pb_token', data.token);
+      else localStorage.removeItem('pb_token');
+      localStorage.setItem('pb_admin', data.isAdmin ? '1' : '0');
     },
     []
   );
@@ -89,7 +106,11 @@ export function AuthProvider({
 
   const logout = useCallback(() => {
     setUsername(null);
+    setToken(null);
+    setIsAdmin(false);
     localStorage.removeItem('pb_username');
+    localStorage.removeItem('pb_token');
+    localStorage.removeItem('pb_admin');
   }, []);
 
   const apiFetch = useCallback(
@@ -101,6 +122,7 @@ export function AuthProvider({
         ...options,
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...options.headers,
         },
       });
@@ -119,13 +141,14 @@ export function AuthProvider({
 
       return res.json() as Promise<T>;
     },
-    []
+    [token]
   );
 
   return (
     <AuthContext.Provider
       value={{
         username,
+        isAdmin,
         login,
         register,
         logout,

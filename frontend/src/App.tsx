@@ -7,6 +7,7 @@ import Leaderboard from './pages/Leaderboard';
 import GameHistory from './pages/GameHistory';
 import Calendar from './pages/Calendar';
 import Settings from './pages/Settings';
+import Admin from './pages/Admin';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -27,6 +28,7 @@ function AppRoutes() {
         <Route path="leaderboard" element={<Leaderboard />} />
         <Route path="history" element={<GameHistory />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="admin" element={<Admin />} />
       </Route>
     </Routes>
   );

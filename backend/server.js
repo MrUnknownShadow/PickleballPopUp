@@ -4,6 +4,8 @@ const express = require("express");
 const cors = require("cors");
 const gamesRouter = require("./src/routes/games");
 const usersRouter = require("./src/routes/users");
+const adminRouter = require("./src/routes/admin");
+const notify = require("./src/notify");
 
 const app = express();
 
@@ -11,9 +13,11 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || "http://localhost:5173",
 }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: false })); // Twilio webhooks are form-encoded
 
 app.use("/api/games", gamesRouter);
 app.use("/api/users", usersRouter);
+app.use("/api/admin", adminRouter);
 
 // Run schema on startup to create tables if they don't exist
 const db = require("./src/db");
@@ -34,6 +38,11 @@ const PORT = process.env.PORT || 3001;
 
 async function start() {
   await initDb();
+  // Queued availability texts and day-before reminders. ponytail: in-process timer, fine for one server instance.
+  setInterval(() => {
+    notify.sendDueInvites().catch((e) => console.error("invites:", e.message));
+    notify.sendDueReminders().catch((e) => console.error("reminders:", e.message));
+  }, 60 * 1000);
   app.listen(PORT, () => console.log(`Server on ${PORT}`));
 }
 
