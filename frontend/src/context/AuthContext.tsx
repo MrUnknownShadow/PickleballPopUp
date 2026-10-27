@@ -45,7 +45,7 @@ export function AuthProvider({
       name: string,
       pin: string,
       phoneNumber = '',
-      smsOptIn = false
+      smsOptIn = true
     ) => {
       const trimmed = name.trim().toLowerCase();
 

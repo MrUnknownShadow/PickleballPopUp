@@ -187,7 +187,7 @@ export default function Login() {
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [smsOptIn, setSmsOptIn] = useState(false);
+  const [smsOptIn, setSmsOptIn] = useState(true);
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -251,7 +251,7 @@ export default function Login() {
     setPin('');
     setConfirmPin('');
     setPhoneNumber('');
-    setSmsOptIn(false);
+    setSmsOptIn(true);
   };
 
   return (
@@ -376,7 +376,7 @@ export default function Login() {
                 />
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 22, fontSize: 13, color: 'var(--gray-700)' }}>
                   <input type="checkbox" checked={smsOptIn} onChange={e => setSmsOptIn(e.target.checked)} style={{ marginTop: 4, accentColor: 'var(--green)' }} />
-                  <span>Send me text notifications about my pickleball events.</span>
+                  <span>Text me about my pickleball events (uncheck to opt out; reply STOP any time).</span>
                 </label>
               </>
             )}

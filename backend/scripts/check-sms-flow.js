@@ -68,7 +68,7 @@ const count = (log, kind, status) => log.filter((m) => m.kind === kind && m.dire
   r = await call(`/api/admin/games/${gid}/select`, { method: "POST", token, body: { selected: [0, 1, 2, 3].map((i) => uid[names[i]]), note: "See you there" } });
   assert.deepEqual(r.data, { picked: 4, dropped: 2 });
   log = await outbox(token);
-  assert.equal(count(log, "selected", "dry_run"), 4); assert.equal(count(log, "not_selected", "dry_run"), 2);
+  assert.equal(count(log, "selected", "dry_run"), 4); assert.equal(count(log, "not_selected", "dry_run"), 0);
   // not-selected players don't see the event (or in the roster); selected ones do
   assert(!(await call(`/api/games?username=${names[4]}`)).data.some((g) => g.gid === gid));
   assert((await call(`/api/games?username=${names[0]}`)).data.some((g) => g.gid === gid));

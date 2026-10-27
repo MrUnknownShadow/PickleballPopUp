@@ -116,7 +116,7 @@ export default function Admin() {
               {btn('3. Send schedule with names', () => post(`${base}/schedule`, { note }, r => `Schedule sent to ${r.sent}`), false, true)}
             </div>
             <div style={{ fontSize: 12, color: 'var(--gray-500)', marginTop: 8 }}>
-              Step 2 texts picked players that they are in, and everyone who said yes but was not picked that they are out. Those players no longer see the event. Day-before reminders go out automatically.
+              Step 2 texts picked players that they are in. Players who said yes but were not picked get no text; they just stop seeing the event. Day-before reminders go out automatically.
             </div>
           </div>
         </>

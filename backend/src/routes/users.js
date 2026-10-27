@@ -28,7 +28,8 @@ router.post("/register", async (req, res) => {
     const username = String(req.body.username || "").trim();
     const pin = String(req.body.pin || "");
     const phoneNumber = normalizePhoneNumber(req.body.phoneNumber);
-    const smsOptIn = req.body.smsOptIn === true;
+    // Opt-in by default; texts only go out once a phone number is on file.
+    const smsOptIn = req.body.smsOptIn !== false && !!phoneNumber;
 
     if (!username) {
       return res.status(400).json({
@@ -45,12 +46,6 @@ router.post("/register", async (req, res) => {
     if (!validPhoneNumber(phoneNumber)) {
       return res.status(400).json({
         error: "Enter a valid phone number",
-      });
-    }
-
-    if (smsOptIn && !phoneNumber) {
-      return res.status(400).json({
-        error: "A phone number is required to enable text notifications",
       });
     }
 

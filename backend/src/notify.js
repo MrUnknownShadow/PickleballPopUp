@@ -88,11 +88,10 @@ async function selectPlayers(gid, selectedUids, note) {
     const next = selectedUids.includes(r.uid) ? "selected" : "not_selected";
     if (r.status === next) continue;
     await db.query("UPDATE GamePlayers SET Status = $3 WHERE GID = $1 AND UID = $2", [gid, r.uid, next]);
-    const text = next === "selected"
-      ? `You're in! Pickleball ${when(r.gametime)} at ${r.location}.`
-      : `Thanks for signing up for pickleball ${when(r.gametime)}. We didn't need you for this one, hope to see you next time.`;
-    await sendSmsToUser(r, withNote(text, note), { kind: next, gid });
-    next === "selected" ? picked++ : dropped++;
+    if (next === "selected") {
+      await sendSmsToUser(r, withNote(`You're in! Pickleball ${when(r.gametime)} at ${r.location}.`, note), { kind: next, gid });
+      picked++;
+    } else dropped++; // not-selected players get no text; the event just disappears for them
   }
   return { picked, dropped };
 }
