@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useId, useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -89,7 +89,7 @@ function CourtIllustration() {
   );
 }
 
-interface FloatingInputProps {
+interface LabeledInputProps {
   label: string;
   type?: string;
   value: string;
@@ -97,9 +97,12 @@ interface FloatingInputProps {
   numeric?: boolean;
   maxLength?: number;
   autoFocus?: boolean;
+  autoComplete?: string;
 }
 
-function FloatingInput({
+// Plain visible label above the field: stays readable with autofill and password managers
+// (a floating label only moves on typing and overlaps autofilled text).
+function LabeledInput({
   label,
   type = 'text',
   value,
@@ -107,68 +110,44 @@ function FloatingInput({
   numeric = false,
   maxLength,
   autoFocus = false,
-}: FloatingInputProps) {
+  autoComplete,
+}: LabeledInputProps) {
+  const id = useId();
   const [focused, setFocused] = useState(false);
 
-  const floated = focused || value.length > 0;
-
   const handleChange = (newValue: string) => {
-    if (numeric) {
-      newValue = newValue.replace(/\D/g, '');
-    }
-
-    if (maxLength) {
-      newValue = newValue.slice(0, maxLength);
-    }
-
+    if (numeric) newValue = newValue.replace(/\D/g, '');
+    if (maxLength) newValue = newValue.slice(0, maxLength);
     onChange(newValue);
   };
 
   return (
-    <div
-      style={{
-        position: 'relative',
-        marginBottom: 36,
-      }}
-    >
+    <div style={{ marginBottom: 22 }}>
       <label
-        style={{
-          position: 'absolute',
-          left: 0,
-          pointerEvents: 'none',
-          top: floated ? -18 : 8,
-          fontSize: floated ? 12 : 18,
-          color: floated
-            ? 'var(--green)'
-            : 'var(--gray-500)',
-          fontWeight: floated ? 700 : 400,
-          letterSpacing: floated ? 0.4 : 0,
-          transition: 'all 0.18s ease',
-        }}
+        htmlFor={id}
+        style={{ display: 'block', fontSize: 13, fontWeight: 700, letterSpacing: 0.3, color: 'var(--gray-700)', marginBottom: 6 }}
       >
         {label}
       </label>
-
       <input
+        id={id}
         type={type}
         value={value}
         onChange={(e) => handleChange(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         autoFocus={autoFocus}
+        autoComplete={autoComplete}
         inputMode={numeric ? 'numeric' : undefined}
         maxLength={maxLength}
         style={{
           width: '100%',
-          border: 'none',
-          borderBottom: `2px solid ${
-            focused
-              ? 'var(--yellow)'
-              : 'var(--gray-300)'
-          }`,
-          background: 'transparent',
-          fontSize: 20,
-          padding: '8px 0',
+          minHeight: 48,
+          border: `2px solid ${focused ? 'var(--green)' : 'var(--gray-300)'}`,
+          borderRadius: 'var(--radius-sm)',
+          background: 'var(--white)',
+          fontSize: 18,
+          padding: '8px 12px',
           outline: 'none',
           fontFamily: 'var(--font-body)',
           color: 'var(--charcoal)',
@@ -338,19 +317,21 @@ export default function Login() {
           <form onSubmit={handleSubmit}>
 
             {/* USERNAME */}
-            <FloatingInput
+            <LabeledInput
               label="Username"
               value={name}
               onChange={setName}
+              autoComplete="username"
               autoFocus
             />
 
             {/* PIN */}
-            <FloatingInput
+            <LabeledInput
               label="4-digit PIN"
               type="password"
               value={pin}
               onChange={setPin}
+              autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
               numeric
               maxLength={4}
             />
@@ -358,19 +339,21 @@ export default function Login() {
             {/* CONFIRM PIN ONLY WHEN REGISTERING */}
             {mode === 'register' && (
               <>
-                <FloatingInput
+                <LabeledInput
                   label="Confirm PIN"
                   type="password"
                   value={confirmPin}
                   onChange={setConfirmPin}
+                  autoComplete="new-password"
                   numeric
                   maxLength={4}
                 />
-                <FloatingInput
+                <LabeledInput
                   label="Phone number (optional)"
                   type="tel"
                   value={phoneNumber}
                   onChange={setPhoneNumber}
+                  autoComplete="tel"
                   numeric
                   maxLength={15}
                 />

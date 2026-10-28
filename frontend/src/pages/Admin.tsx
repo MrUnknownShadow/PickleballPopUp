@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useApi, useNotification } from '../hooks/useApi';
 import type { Game } from '../types';
@@ -65,17 +65,37 @@ export default function Admin() {
   const warnNoOptIn = players.filter(p => checked.has(p.uid) && !p.smsoptin).length;
 
   const btn = (label: string, onClick: () => void, disabled: boolean, primary = false) => (
-    <button className={`btn btn-sm ${primary ? 'btn-primary' : 'btn-secondary'}`} disabled={disabled || busy} onClick={onClick}>{label}</button>
+    <button
+      className={`btn btn-block ${primary ? 'btn-primary' : 'btn-secondary'}`}
+      style={{ minHeight: 44, justifyContent: 'center' }}
+      disabled={disabled || busy}
+      onClick={onClick}
+    >
+      {label}
+    </button>
   );
+
+  const step = (n: number, title: string, hint: string | null, body: ReactNode) => (
+    <section className="card" style={{ padding: 16, marginTop: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: hint ? 4 : 12 }}>
+        <span aria-hidden="true" style={{ width: 28, height: 28, borderRadius: 99, background: 'var(--green)', color: 'var(--white)', fontWeight: 800, fontSize: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{n}</span>
+        <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>{title}</h2>
+      </div>
+      {hint && <p style={{ fontSize: 13, color: 'var(--gray-500)', margin: '0 0 12px 38px' }}>{hint}</p>}
+      {body}
+    </section>
+  );
+
+  const fieldLabel = { display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--gray-700)', marginBottom: 6 } as const;
 
   return (
     <div className="fade-in">
       <div className="page-title">Text Messaging</div>
-      <div className="page-subtitle">Pick players, send availability, confirm the roster, send the schedule</div>
+      <div className="page-subtitle">Work top to bottom: pick players, ask, confirm, send the schedule.</div>
 
       <div className="card" style={{ padding: 16, marginTop: 16 }}>
-        <label style={{ fontSize: 13, fontWeight: 600 }}>Event</label>
-        <select value={gid ?? ''} onChange={e => setGid(Number(e.target.value))} style={{ display: 'block', width: '100%', padding: 8, marginTop: 6 }}>
+        <label htmlFor="admin-event" style={fieldLabel}>Event</label>
+        <select id="admin-event" className="settings-input" value={gid ?? ''} onChange={e => setGid(Number(e.target.value))} style={{ minHeight: 44 }}>
           {events.length === 0 && <option value="">No upcoming events</option>}
           {events.map(g => {
             const id = (g.gid ?? g.GID) as number;
@@ -86,75 +106,82 @@ export default function Admin() {
 
       {gid !== null && (
         <>
-          <div className="card" style={{ padding: 16, marginTop: 16 }}>
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>Players ({checked.size} picked)</div>
-            {players.map(p => (
-              <label key={p.uid} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid var(--gray-100)' }}>
-                <input type="checkbox" checked={checked.has(p.uid)} onChange={() => toggle(p.uid)} />
-                <span style={{ flex: 1 }}>{p.username}</span>
-                <span style={{ fontSize: 12, color: p.smsoptin ? 'var(--green)' : 'var(--danger)' }}>
-                  {p.smsoptin ? `text ...${p.phonelast4}` : 'no texts'}
-                </span>
-                <span className="badge badge-gray">{p.status ? STATUS_LABEL[p.status] ?? p.status : 'not asked'}</span>
-              </label>
-            ))}
-            {warnNoOptIn > 0 && <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: 8 }}>{warnNoOptIn} picked player(s) have not opted in to texts and will be skipped.</div>}
-          </div>
+          {step(1, `Pick players (${checked.size} picked)`, 'Everyone you tick gets the next text you send.', (
+            <>
+              {players.map(p => (
+                <label key={p.uid} style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 48, padding: '4px 0', borderBottom: '1px solid var(--gray-100)', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={checked.has(p.uid)} onChange={() => toggle(p.uid)} style={{ width: 20, height: 20, accentColor: 'var(--green)', flexShrink: 0 }} />
+                  <span style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>{p.username}</span>
+                  <span style={{ fontSize: 12, color: p.smsoptin ? 'var(--green)' : 'var(--danger)', whiteSpace: 'nowrap' }}>
+                    {p.smsoptin ? `text ...${p.phonelast4}` : 'no texts'}
+                  </span>
+                  <span className="badge badge-gray" style={{ whiteSpace: 'nowrap' }}>{p.status ? STATUS_LABEL[p.status] ?? p.status : 'not asked'}</span>
+                </label>
+              ))}
+              {warnNoOptIn > 0 && <div role="status" style={{ fontSize: 13, color: 'var(--danger)', marginTop: 10 }}>{warnNoOptIn} picked player(s) have not opted in to texts and will be skipped.</div>}
+            </>
+          ))}
 
-          <div className="card" style={{ padding: 16, marginTop: 16 }}>
-            <label style={{ fontSize: 13, fontWeight: 600 }}>Extra comment added to the text (optional)</label>
-            <textarea value={note} onChange={e => setNote(e.target.value)} maxLength={300} rows={2} style={{ display: 'block', width: '100%', padding: 8, marginTop: 6 }} placeholder="e.g. Bring water, court 3" />
+          {step(2, 'Ask who can play', 'Players reply YES or NO by text.', (
+            <>
+              <label htmlFor="admin-note" style={fieldLabel}>Extra comment added to every text (optional)</label>
+              <textarea id="admin-note" className="settings-input" value={note} onChange={e => setNote(e.target.value)} maxLength={300} rows={2} placeholder="e.g. Bring water, court 3" />
+              <div style={{ marginTop: 12 }}>{btn('Ask availability now', () => post(`${base}/invite`, { uids, note }, r => `Sent ${r.sentNow}`), noPicks, true)}</div>
+              <label htmlFor="admin-sendat" style={{ ...fieldLabel, marginTop: 16 }}>Or send it later</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <input id="admin-sendat" className="settings-input" type="datetime-local" value={sendAt} onChange={e => setSendAt(e.target.value)} style={{ flex: '1 1 200px', minHeight: 44, width: 'auto' }} />
+                <div style={{ flex: '0 0 auto' }}>{btn('Queue it', () => post(`${base}/invite`, { uids, note, sendAt: new Date(sendAt).toISOString() }, r => `Queued ${r.queued}`), noPicks || !sendAt)}</div>
+              </div>
+            </>
+          ))}
 
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14, alignItems: 'center' }}>
-              {btn('1. Ask availability now', () => post(`${base}/invite`, { uids, note }, r => `Sent ${r.sentNow}`), noPicks, true)}
-              <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>or on</span>
-              <input type="datetime-local" value={sendAt} onChange={e => setSendAt(e.target.value)} style={{ padding: 6 }} />
-              {btn('Queue it', () => post(`${base}/invite`, { uids, note, sendAt: new Date(sendAt).toISOString() }, r => `Queued ${r.queued}`), noPicks || !sendAt)}
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-              {btn('2. Confirm roster (picked = playing)', () => post(`${base}/select`, { selected: uids, note }, r => `${r.picked} selected and texted, ${r.dropped} left out (no text)`), noPicks, true)}
-              {btn('3. Send schedule with names', () => post(`${base}/schedule`, { note }, r => `Schedule sent to ${r.sent}`), false, true)}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--gray-500)', marginTop: 8 }}>
-              Step 2 texts picked players that they are in. Players who said yes but were not picked get no text; they just stop seeing the event. Day-before reminders go out automatically.
-            </div>
-          </div>
+          {step(3, 'Confirm the roster', 'Ticked players are playing and get an "in" text. Players who said yes but were not ticked get no text; they just stop seeing the event.', (
+            btn('Confirm roster', () => post(`${base}/select`, { selected: uids, note }, r => `${r.picked} selected and texted, ${r.dropped} left out (no text)`), noPicks, true)
+          ))}
+
+          {step(4, 'Send the schedule', 'Texts everyone selected the time, place and who is playing. Day-before reminders go out on their own.', (
+            btn('Send schedule with names', () => post(`${base}/schedule`, { note }, r => `Schedule sent to ${r.sent}`), false, true)
+          ))}
         </>
       )}
 
-      <div className="card" style={{ padding: 16, marginTop: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <div style={{ fontWeight: 700 }}>Text log (latest 40)</div>
-          <div style={{ display: 'flex', gap: 6 }}>
+      <section className="card" style={{ padding: 16, marginTop: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>Text log</h2>
+          <div style={{ display: 'flex', gap: 8 }}>
             {btn('Send due texts now', () => post('/api/admin/run-scheduler', {}, r => `${r.invites} invites, ${r.reminders} reminders`), false)}
             {btn('Refresh', load, false)}
           </div>
         </div>
         {outbox.length === 0 && <div style={{ fontSize: 13, color: 'var(--gray-500)' }}>No texts yet.</div>}
         {outbox.map(m => (
-          <div key={m.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--gray-100)', fontSize: 13 }}>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div key={m.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--gray-100)', fontSize: 13 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <strong>{m.direction === 'in' ? 'from' : 'to'} {m.username}</strong>
               <span className="badge badge-gray">{m.kind}</span>
               <span className={`badge ${m.status === 'failed' ? 'badge-red' : m.status === 'skipped' ? 'badge-yellow' : 'badge-green'}`}>{m.status}</span>
               <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--gray-500)' }}>{new Date(m.createdat).toLocaleTimeString()}</span>
             </div>
-            <div style={{ color: 'var(--gray-700)', whiteSpace: 'pre-wrap', marginTop: 2 }}>{m.body}</div>
+            <div style={{ color: 'var(--gray-700)', whiteSpace: 'pre-wrap', marginTop: 4 }}>{m.body}</div>
             {m.error && <div style={{ color: 'var(--danger)' }}>{m.error}</div>}
           </div>
         ))}
-      </div>
+      </section>
 
-      <div className="card" style={{ padding: 16, marginTop: 16 }}>
-        <div style={{ fontWeight: 700, marginBottom: 6 }}>Test: pretend a player texted back</div>
-        <div style={{ fontSize: 12, color: 'var(--gray-500)', marginBottom: 8 }}>Uses the player ticked above. Works without Twilio.</div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {['YES', 'NO', 'STOP'].map(t => btn(`Reply ${t}`, () => {
-            if (checked.size !== 1) { show('Tick exactly one player', 'error'); return; }
-            post('/api/admin/simulate-reply', { uid: uids[0], text: t }, () => `Simulated ${t}`);
-          }, false))}
+      <details className="card" style={{ padding: 16, marginTop: 16 }}>
+        <summary style={{ fontWeight: 700, cursor: 'pointer', minHeight: 24 }}>Testing tools: pretend a player texted back</summary>
+        <p style={{ fontSize: 13, color: 'var(--gray-500)', margin: '8px 0 12px' }}>Tick exactly one player in step 1. Works without a text provider.</p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {['YES', 'NO', 'STOP'].map(t => (
+            <div key={t} style={{ flex: '1 1 90px' }}>
+              {btn(`Reply ${t}`, () => {
+                if (checked.size !== 1) { show('Tick exactly one player', 'error'); return; }
+                post('/api/admin/simulate-reply', { uid: uids[0], text: t }, () => `Simulated ${t}`);
+              }, false)}
+            </div>
+          ))}
         </div>
-      </div>
+      </details>
       {Notification}
     </div>
   );
