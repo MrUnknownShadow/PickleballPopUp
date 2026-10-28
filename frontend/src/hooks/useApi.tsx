@@ -54,7 +54,7 @@ export function useNotification(): UseNotificationResult {
   }, []);
 
   const NotificationEl: ReactNode = notif ? (
-    <div className={`notification ${notif.type}`}>{notif.message}</div>
+    <div className={`notification ${notif.type}`} role={notif.type === 'error' ? 'alert' : 'status'}>{notif.message}</div>
   ) : null;
 
   return { show, Notification: NotificationEl };

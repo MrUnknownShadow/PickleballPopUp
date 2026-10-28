@@ -13,7 +13,7 @@
   --charcoal: #14181C;
   --charcoal-mid: #232A24;
   --gray-700: #4A4E46;
-  --gray-500: #767A70;
+  --gray-500: #666A60;
   --gray-300: #C9CDBF;
   --gray-100: #F4F3EC;
   --white: #FEFDF9;
@@ -32,6 +32,8 @@
 
 body { background: var(--gray-100); color: var(--charcoal); min-height: 100vh; font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
 a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 3px solid var(--green); outline-offset: 2px; }
+.login-submit-btn:focus-visible, .modal :focus-visible, .mobile-bar :focus-visible, .desktop-sidebar :focus-visible, .mobile-menu :focus-visible { outline-color: var(--yellow); }
 button { cursor: pointer; font-family: inherit; border: none; background: none; }
 input, select, textarea { font-family: inherit; }
 
@@ -67,6 +69,7 @@ input, select, textarea { font-family: inherit; }
 .card { background: var(--white); border-radius: var(--radius-lg); box-shadow: none; border: 1.5px solid var(--line); }
 .settings-input { width: 100%; padding: 10px 12px; border: 1.5px solid var(--gray-300); border-radius: var(--radius-sm); background: var(--white); color: var(--charcoal); font-size: 14px; outline: none; }
 .settings-input:focus { border-color: var(--green); }
+.settings-input:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--green-mid); }
 .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 700; letter-spacing: 0.03em; }
 .badge-green { background: var(--green-light); color: var(--green-dark); }
 .badge-yellow { background: var(--yellow-light); color: var(--yellow-dark); }
@@ -103,6 +106,7 @@ input, select, textarea { font-family: inherit; }
 .calendar-event-time, .calendar-event-location { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-event-time { font-size: 10px; font-weight: 700; }
 .calendar-event-location { font-size: 12px; font-weight: 600; }
+.calendar-agenda { display: none; }
 .calendar-message { padding: 70px 20px; text-align: center; color: var(--gray-500); }
 .calendar-error { display: flex; align-items: center; gap: 8px; padding: 14px 18px; color: var(--danger); background: var(--danger-light); font-size: 14px; }
 .calendar-empty { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 24px; color: var(--gray-500); font-size: 14px; }
@@ -147,7 +151,7 @@ input, select, textarea { font-family: inherit; }
 
 @keyframes modalIn { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
-.notification { position: fixed; top: 20px; right: 20px; background: var(--charcoal); color: var(--white); padding: 12px 20px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; z-index: 2000; animation: slideIn 0.2s ease; }
+.notification { position: fixed; top: 20px; right: 20px; max-width: calc(100vw - 40px); background: var(--charcoal); color: var(--white); padding: 12px 20px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; z-index: 2000; animation: slideIn 0.2s ease; }
 .notification.success { background: var(--green); }
 .notification.error { background: var(--danger); }
 
@@ -217,11 +221,30 @@ input, select, textarea { font-family: inherit; }
   .calendar-weekdays div { padding: 8px 4px; text-align: center; font-size: 9px; }
   .calendar-day { min-height: 92px; padding: 5px; }
   .calendar-day-number { width: 22px; height: 22px; font-size: 11px; }
-  .calendar-event { padding: 4px; }
-  .calendar-event-time { font-size: 9px; }
-  .calendar-event-location { font-size: 10px; }
+  .calendar-events { flex-direction: row; flex-wrap: wrap; gap: 3px; }
+  .calendar-event { width: 8px; height: 8px; padding: 0; border-radius: 50%; border-left-width: 0; background: var(--green); }
+  .calendar-event-completed, .calendar-event-in_progress { background: var(--yellow-dark); }
+  .calendar-event-time, .calendar-event-location { display: none; }
+  .calendar-agenda { display: block; border-top: 1px solid var(--line); padding: 16px; }
+  .calendar-agenda h2 { font-family: var(--font-display); font-size: 20px; margin-bottom: 8px; }
+  .calendar-agenda p { color: var(--gray-500); font-size: 14px; }
+  .calendar-agenda-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .calendar-agenda-item strong { display: block; font-size: 15px; overflow-wrap: anywhere; }
+  .calendar-agenda-item small { display: block; font-size: 13px; color: var(--gray-500); }
 }
 
 @media (max-width: 480px) {
   .grid-3 { grid-template-columns: 1fr !important; }
+}
+/* Touch devices: 44px targets and 16px inputs (smaller text makes iOS zoom in on focus). */
+@media (pointer: coarse) {
+  .btn, .calendar-icon-button, .calendar-today-button, .settings-input { min-height: 44px; }
+  .settings-input { font-size: 16px; }
+}
+@media (max-width: 768px) {
+  .notification { top: 64px; left: 16px; right: 16px; text-align: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }

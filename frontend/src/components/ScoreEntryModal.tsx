@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import type { SubGame } from '../types';
-import FloatingInput from './FloatingInput';
+import LabeledInput from './LabeledInput';
+import { useEscape } from '../hooks/useEscape';
 
 interface ScoreEntryModalProps {
   subGame: SubGame;
@@ -10,6 +11,7 @@ interface ScoreEntryModalProps {
 }
 
 export default function ScoreEntryModal({ subGame, onClose, onEnded, apiFetch }: ScoreEntryModalProps) {
+  useEscape(onClose);
   const [team1score, setTeam1score] = useState('');
   const [team2score, setTeam2score] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,8 +38,8 @@ export default function ScoreEntryModal({ subGame, onClose, onEnded, apiFetch }:
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-title">Enter Final Score</div>
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="score-title" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-title" id="score-title">Enter Final Score</div>
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
             <div>
@@ -45,14 +47,14 @@ export default function ScoreEntryModal({ subGame, onClose, onEnded, apiFetch }:
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green-dark)', marginBottom: 4 }}>TEAM A</div>
                 <div style={{ fontSize: 13 }}>{subGame.team1.join(', ')}</div>
               </div>
-              <FloatingInput label="Team A score" type="number" min={0} max={99} value={team1score} onChange={setTeam1score} required />
+              <LabeledInput label="Team A score" type="number" min={0} max={99} value={team1score} onChange={setTeam1score} required />
             </div>
             <div>
               <div style={{ background: 'var(--yellow-light)', borderRadius: 'var(--radius-md)', padding: '10px 12px', marginBottom: 8 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--yellow-dark)', marginBottom: 4 }}>TEAM B</div>
                 <div style={{ fontSize: 13 }}>{subGame.team2.join(', ')}</div>
               </div>
-              <FloatingInput label="Team B score" type="number" min={0} max={99} value={team2score} onChange={setTeam2score} required />
+              <LabeledInput label="Team B score" type="number" min={0} max={99} value={team2score} onChange={setTeam2score} required />
             </div>
           </div>
           {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 10 }}>{error}</div>}

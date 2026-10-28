@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useEscape } from '../hooks/useEscape';
 import { Shuffle } from 'lucide-react';
 import type { Player } from '../types';
 
@@ -11,6 +12,7 @@ interface TeamPickerModalProps {
 }
 
 export default function TeamPickerModal({ players, onClose, onStarted, apiFetch, eventId }: TeamPickerModalProps) {
+  useEscape(onClose);
   const names = players.map(p => p.username ?? p.Username ?? '').filter(Boolean);
   const [team1, setTeam1] = useState<string[]>([]);
   const [team2, setTeam2] = useState<string[]>([]);
@@ -55,8 +57,8 @@ export default function TeamPickerModal({ players, onClose, onStarted, apiFetch,
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-title">Start New Game</div>
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="team-title" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-title" id="team-title">Start New Game</div>
 
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>

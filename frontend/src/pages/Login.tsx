@@ -1,6 +1,7 @@
-import { useId, useState, FormEvent } from 'react';
+import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import LabeledInput from '../components/LabeledInput';
 
 function CourtIllustration() {
   return (
@@ -86,75 +87,6 @@ function CourtIllustration() {
       <circle cx="243" cy="357" r="1.6" fill="var(--green)" />
       <circle cx="257" cy="357" r="1.6" fill="var(--green)" />
     </svg>
-  );
-}
-
-interface LabeledInputProps {
-  label: string;
-  type?: string;
-  value: string;
-  onChange: (value: string) => void;
-  numeric?: boolean;
-  maxLength?: number;
-  autoFocus?: boolean;
-  autoComplete?: string;
-}
-
-// Plain visible label above the field: stays readable with autofill and password managers
-// (a floating label only moves on typing and overlaps autofilled text).
-function LabeledInput({
-  label,
-  type = 'text',
-  value,
-  onChange,
-  numeric = false,
-  maxLength,
-  autoFocus = false,
-  autoComplete,
-}: LabeledInputProps) {
-  const id = useId();
-  const [focused, setFocused] = useState(false);
-
-  const handleChange = (newValue: string) => {
-    if (numeric) newValue = newValue.replace(/\D/g, '');
-    if (maxLength) newValue = newValue.slice(0, maxLength);
-    onChange(newValue);
-  };
-
-  return (
-    <div style={{ marginBottom: 22 }}>
-      <label
-        htmlFor={id}
-        style={{ display: 'block', fontSize: 13, fontWeight: 700, letterSpacing: 0.3, color: 'var(--gray-700)', marginBottom: 6 }}
-      >
-        {label}
-      </label>
-      <input
-        id={id}
-        type={type}
-        value={value}
-        onChange={(e) => handleChange(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        autoFocus={autoFocus}
-        autoComplete={autoComplete}
-        inputMode={numeric ? 'numeric' : undefined}
-        maxLength={maxLength}
-        style={{
-          width: '100%',
-          minHeight: 48,
-          border: `2px solid ${focused ? 'var(--green)' : 'var(--gray-300)'}`,
-          borderRadius: 'var(--radius-sm)',
-          background: 'var(--white)',
-          fontSize: 18,
-          padding: '8px 12px',
-          outline: 'none',
-          fontFamily: 'var(--font-body)',
-          color: 'var(--charcoal)',
-          transition: 'border-color 0.18s ease',
-        }}
-      />
-    </div>
   );
 }
 

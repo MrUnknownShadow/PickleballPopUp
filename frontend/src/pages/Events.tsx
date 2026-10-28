@@ -4,9 +4,11 @@ import { useApi, useNotification } from '../hooks/useApi';
 import { useAuth } from '../context/AuthContext';
 import type { Game } from '../types';
 import { Clock, AlertTriangle, Calendar, ChevronRight } from 'lucide-react';
-import FloatingInput from '../components/FloatingInput';
+import LabeledInput from '../components/LabeledInput';
+import { useEscape } from '../hooks/useEscape';
 
 function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  useEscape(onClose);
   const { apiFetch, username } = useAuth();
   const [location, setLocation] = useState('');
   const [date, setDate] = useState('');
@@ -33,12 +35,12 @@ function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreat
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-title">Create New Event</div>
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="create-event-title" onClick={e => e.stopPropagation()}>
+        <div className="modal-title" id="create-event-title">Create New Event</div>
         <form onSubmit={handleSubmit}>
-          <FloatingInput label="Location & Time" value={location} onChange={setLocation} required />
-          <FloatingInput label="Date" type="date" value={date} onChange={setDate} required />
-          <FloatingInput label="Time" type="time" value={time} onChange={setTime} required />
+          <LabeledInput label="Location" value={location} onChange={setLocation} required />
+          <LabeledInput label="Date" type="date" value={date} onChange={setDate} required />
+          <LabeledInput label="Time" type="time" value={time} onChange={setTime} required />
           {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 10 }}>{error}</div>}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
@@ -131,8 +133,12 @@ export default function Events() {
     const tb = new Date(b.gametime ?? b.GameTime ?? 0).getTime();
     return ta - tb;
   });
-  const hero = sortedUpcoming[0];
-  const restUpcoming = sortedUpcoming.slice(1);
+  // A scheduled event more than a day old was never ended: keep it out of "Up next".
+  const isLate = (e: Game) => (e.status ?? e.Status) === 'scheduled' && new Date(e.gametime ?? e.GameTime ?? 0).getTime() < Date.now() - 24 * 3600e3;
+  const current = sortedUpcoming.filter(e => !isLate(e));
+  const late = sortedUpcoming.filter(isLate);
+  const hero = current[0];
+  const restUpcoming = current.slice(1);
 
   return (
     <div>
@@ -173,6 +179,17 @@ export default function Events() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
             {restUpcoming.map(event => <EventTile key={event.gid ?? event.GID} event={event} />)}
+          </div>
+        </div>
+      )}
+
+      {late.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-500)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
+            Past, never ended ({late.length})
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+            {late.map(event => <EventTile key={event.gid ?? event.GID} event={event} />)}
           </div>
         </div>
       )}

@@ -58,6 +58,15 @@ export default function Calendar() {
     return grouped;
   }, [events]);
 
+  // Phone layout: the grid shows dots only, and this list under it shows what each dot is.
+  const monthEvents = useMemo(
+    () => (events ?? [])
+      .filter(e => { const d = getEventDate(e); return d && d.getFullYear() === visibleMonth.getFullYear() && d.getMonth() === visibleMonth.getMonth(); })
+      .sort((a, b) => (getEventDate(a)?.getTime() ?? 0) - (getEventDate(b)?.getTime() ?? 0)),
+    [events, visibleMonth]
+  );
+  const agendaFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
   const shiftMonth = (offset: number) => {
     setVisibleMonth(current => new Date(current.getFullYear(), current.getMonth() + offset, 1));
   };
@@ -117,6 +126,23 @@ export default function Calendar() {
                     })}
                   </div>
                 </div>
+              );
+            })}
+          </div>
+          <div className="calendar-agenda">
+            <h2>This month</h2>
+            {monthEvents.length === 0 && <p>No events this month.</p>}
+            {monthEvents.map(event => {
+              const d = getEventDate(event);
+              const status = event.status ?? event.Status ?? 'scheduled';
+              return (
+                <Link className="calendar-agenda-item" to={`/events/${event.gid ?? event.GID}`} key={event.gid ?? event.GID}>
+                  <span>
+                    <strong>{event.location ?? event.Location ?? 'TBD'}</strong>
+                    <small>{d ? agendaFormatter.format(d) : 'Time TBD'}</small>
+                  </span>
+                  <span className={`badge ${status === 'completed' ? 'badge-yellow' : status === 'in_progress' ? 'badge-yellow' : 'badge-green'}`}>{status.replace('_', ' ')}</span>
+                </Link>
               );
             })}
           </div>

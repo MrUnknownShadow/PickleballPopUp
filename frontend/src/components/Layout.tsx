@@ -30,7 +30,7 @@ export default function Layout() {
         alignItems: 'center', justifyContent: 'space-between',
       }} className="mobile-bar">
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'white' }}>PICKLEBALL POP-UP</div>
-        <button onClick={() => setMenuOpen(!menuOpen)} style={{ color: 'white', background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}>
+        <button onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? 'Close menu' : 'Open menu'} aria-expanded={menuOpen} style={{ color: 'white', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, margin: '-10px -10px -10px 0' }}>
           {menuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
       </div>
@@ -41,6 +41,7 @@ export default function Layout() {
           position: 'fixed', top: 52, left: 0, right: 0, zIndex: 199,
           background: 'var(--charcoal)', padding: '8px 12px 16px',
         }} className="mobile-menu">
+          <nav aria-label="Main">
           {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink key={to} to={to} onClick={() => setMenuOpen(false)} style={({ isActive }) => ({
               display: 'flex', alignItems: 'center', gap: 10, padding: '12px 12px',
@@ -49,12 +50,13 @@ export default function Layout() {
               background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
               textDecoration: 'none',
             })}>
-              <Icon size={16} />{label}
+              <Icon size={16} aria-hidden="true" />{label}
             </NavLink>
           ))}
+          </nav>
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 8, paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{username}</span>
-            <button onClick={handleLogout} style={{ color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', fontSize: 13, cursor: 'pointer' }}>Sign out</button>
+            <button onClick={handleLogout} style={{ color: 'rgba(255,255,255,0.75)', background: 'none', border: 'none', fontSize: 14, cursor: 'pointer', minHeight: 44, padding: '0 8px' }}>Sign out</button>
           </div>
         </div>
       )}
@@ -74,7 +76,7 @@ export default function Layout() {
           </div>
         </div>
 
-        <nav style={{ flex: 1, padding: '14px 10px' }}>
+        <nav aria-label="Main" style={{ flex: 1, padding: '14px 10px' }}>
           {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink key={to} to={to} style={({ isActive }) => ({
               display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
@@ -83,7 +85,7 @@ export default function Layout() {
               background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent', transition: 'all 0.15s',
               textDecoration: 'none',
             })}>
-              <Icon size={15} />{label}
+              <Icon size={15} aria-hidden="true" />{label}
             </NavLink>
           ))}
         </nav>
@@ -93,7 +95,7 @@ export default function Layout() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--white)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{username}</div>
           </div>
-          <button onClick={handleLogout} title="Sign out" style={{ color: 'rgba(255,255,255,0.35)', padding: 4, background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}><LogOut size={16} /></button>
+          <button onClick={handleLogout} title="Sign out" aria-label="Sign out" style={{ color: 'rgba(255,255,255,0.6)', padding: 8, background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}><LogOut size={16} /></button>
         </div>
       </aside>
 
