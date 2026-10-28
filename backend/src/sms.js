@@ -1,12 +1,44 @@
 const db = require("./db");
 
-// Twilio REST via fetch (no SDK dependency). Without credentials, or with SMS_DRY_RUN=1, it logs
-// instead of sending, so dev and teammates without a Twilio account can run the app.
+// Bandwidth Build: exchange the OAuth client id/secret for a bearer token (cached until just before it expires).
+let bwToken = null, bwExpires = 0;
+async function bandwidthToken(id, secret) {
+  if (bwToken && Date.now() < bwExpires) return bwToken;
+  const res = await fetch("https://api.bandwidth.com/api/v1/oauth2/token", {
+    method: "POST",
+    headers: { Authorization: "Basic " + Buffer.from(`${id}:${secret}`).toString("base64"), "Content-Type": "application/x-www-form-urlencoded" },
+    body: "grant_type=client_credentials",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`Bandwidth auth ${res.status}: ${data.error_description || data.error || data.message || "failed"}`);
+  bwToken = data.access_token;
+  bwExpires = Date.now() + (data.expires_in - 30) * 1000;
+  return bwToken;
+}
+
+// Sends via Bandwidth Build when all BANDWIDTH_* vars are set, else Twilio (REST via fetch, no SDK).
+// Without credentials, or with SMS_DRY_RUN=1, it logs instead of sending, so dev and teammates
+// without an account can run the app.
 async function sendSms(to, body) {
   const { TWILIO_ACCOUNT_SID: sid, TWILIO_AUTH_TOKEN: token, TWILIO_FROM_NUMBER: from } = process.env;
-  if (process.env.SMS_DRY_RUN === "1" || !sid || !token || !from) {
+  const { BANDWIDTH_ACCOUNT_ID: bwAcct, BANDWIDTH_CLIENT_ID: bwId, BANDWIDTH_CLIENT_SECRET: bwSecret,
+          BANDWIDTH_APPLICATION_ID: bwApp, BANDWIDTH_FROM_NUMBER: bwFrom } = process.env;
+  const bandwidth = bwAcct && bwId && bwSecret && bwApp && bwFrom;
+  if (process.env.SMS_DRY_RUN === "1" || !(bandwidth || (sid && token && from))) {
     console.log(`[sms dry-run] to=${to} body=${JSON.stringify(body)}`);
     return { dryRun: true };
+  }
+  if (bandwidth) {
+    // Build trial rejects non-ASCII (curly quotes, dashes, emoji) and only texts the verified number.
+    const text = body.replace(/[\u2018\u2019]/g, "'").replace(/[\u201c\u201d]/g, '"').replace(/[\u2013\u2014]/g, "-").replace(/[^\x00-\x7F]/g, "");
+    const res = await fetch(`https://api.bandwidth.com/v1/build/accounts/${bwAcct}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${await bandwidthToken(bwId, bwSecret)}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ applicationId: bwApp, to: [to], from: bwFrom, text }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(`Bandwidth ${res.status}: ${data.description || data.message || JSON.stringify(data)}`);
+    return { sid: data.id, status: "sent" };
   }
   const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
     method: "POST",
@@ -62,4 +94,14 @@ function validTwilioSignature(req) {
   return got.length === expected.length && require("crypto").timingSafeEqual(Buffer.from(got), Buffer.from(expected));
 }
 
-module.exports = { sendSms, sendSmsToUser, log, validTwilioSignature };
+// Bandwidth callbacks carry no signature; they use HTTP Basic auth if you set credentials on the application.
+// Set BANDWIDTH_WEBHOOK_USER / BANDWIDTH_WEBHOOK_PASSWORD to the same values to enforce it.
+function validBandwidthAuth(req) {
+  const { BANDWIDTH_WEBHOOK_USER: u, BANDWIDTH_WEBHOOK_PASSWORD: p } = process.env;
+  if (!u || !p || process.env.SMS_DRY_RUN === "1") return true; // dry-run / local dev
+  const expected = "Basic " + Buffer.from(`${u}:${p}`).toString("base64");
+  const got = req.get("Authorization") || "";
+  return got.length === expected.length && require("crypto").timingSafeEqual(Buffer.from(got), Buffer.from(expected));
+}
+
+module.exports = { sendSms, sendSmsToUser, log, validTwilioSignature, validBandwidthAuth };

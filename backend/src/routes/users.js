@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const db = require("../db");
 
 const { createSession } = require("../auth");
-const { validTwilioSignature } = require("../sms");
+const { validTwilioSignature, validBandwidthAuth } = require("../sms");
 const { handleReply } = require("../notify");
 
 const router = express.Router();
@@ -168,25 +168,42 @@ router.delete("/:username", async (req, res) => {
   }
 });
 
-/* SMS PROVIDER WEBHOOK: STOP immediately revokes consent. */
+// STOP immediately revokes consent; anything else is treated as an availability reply.
+async function handleInbound(from, text) {
+  if (!from) return;
+  if (text.trim().toUpperCase() === "STOP") {
+    await db.query(
+      `UPDATE Users
+       SET SmsOptIn = FALSE, SmsOptedOutAt = NOW()
+       WHERE PhoneNumber = $1`,
+      [from]
+    );
+  } else {
+    await handleReply(from, text);
+  }
+}
+
+/* TWILIO WEBHOOK */
 router.post("/sms/inbound", async (req, res) => {
   try {
     if (!validTwilioSignature(req)) return res.status(403).json({ error: "Bad signature" });
-    const from = normalizePhoneNumber(req.body.from || req.body.From);
-    const body = String(req.body.body || req.body.Body || "").trim().toUpperCase();
-
-    if (from && body === "STOP") {
-      await db.query(
-        `UPDATE Users
-         SET SmsOptIn = FALSE, SmsOptedOutAt = NOW()
-         WHERE PhoneNumber = $1`,
-        [from]
-      );
-    } else if (from) {
-      await handleReply(from, String(req.body.body || req.body.Body || ""));
-    }
-
+    await handleInbound(normalizePhoneNumber(req.body.from || req.body.From), String(req.body.body || req.body.Body || ""));
     res.status(204).send();
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/* BANDWIDTH WEBHOOK: set the application's inbound callback URL to /api/users/sms/bandwidth */
+router.post("/sms/bandwidth", async (req, res) => {
+  try {
+    if (!validBandwidthAuth(req)) return res.status(401).json({ error: "Bad credentials" });
+    for (const ev of Array.isArray(req.body) ? req.body : []) {
+      if (ev.type === "message-received") {
+        await handleInbound(normalizePhoneNumber(ev.message?.from), String(ev.message?.text || ""));
+      }
+    }
+    res.status(200).send();
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

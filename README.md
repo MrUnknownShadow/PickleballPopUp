@@ -182,7 +182,7 @@ Hosting for the sponsor's setup has not been decided yet. The previous Render de
 
 Scheduling runs on text messages sent through Twilio. The website is the admin's control panel (Admin tab).
 
-**Flow:** admin picks players and asks availability (now, or queued for Sunday) -> players reply YES / NO by text -> admin confirms the final roster (players picked are told they are in, others are told they are out and no longer see the event) -> admin sends the schedule (lists everyone playing) -> a reminder goes out automatically within 24 hours of the game. Every text can carry a custom admin comment. Players who text STOP are opted out.
+**Flow:** admin picks players and asks availability (now, or queued for Sunday) -> players reply YES / NO by text -> admin confirms the final roster (players picked are texted that they are in; players not picked get no text and no longer see the event) -> admin sends the schedule (lists everyone playing) -> a reminder goes out automatically within 24 hours of the game. Every text can carry a custom admin comment. Players who text STOP are opted out.
 
 **Setup (backend/.env):**
 ```
@@ -192,9 +192,21 @@ TWILIO_FROM_NUMBER=+1XXXXXXXXXX
 PUBLIC_BASE_URL=https://your-api.onrender.com   # used to verify Twilio webhook signatures
 SMS_DRY_RUN=1                                   # log texts instead of sending (dev/testing)
 ```
-With no Twilio keys, or with `SMS_DRY_RUN=1`, texts are only logged and shown in the Admin tab's text log.
+**Bandwidth Build (alternative to Twilio):** if all of these are set, texts go through Bandwidth instead of Twilio. The free trial texts only your verified mobile number, ASCII only, 129 characters or fewer, 6 per minute:
+```
+BANDWIDTH_ACCOUNT_ID=...          # numeric account id (decode it from the OAuth token's "accounts" claim)
+BANDWIDTH_CLIENT_ID=...           # OAuth client id/secret from the Bandwidth app (Account > API Credentials)
+BANDWIDTH_CLIENT_SECRET=...
+BANDWIDTH_APPLICATION_ID=...      # messaging application id
+BANDWIDTH_FROM_NUMBER=+1XXXXXXXXXX
+BANDWIDTH_WEBHOOK_USER=...        # optional: Basic auth you set on the application's callback
+BANDWIDTH_WEBHOOK_PASSWORD=...
+```
+With no provider keys, or with `SMS_DRY_RUN=1`, texts are only logged and shown in the Admin tab's text log.
 
 **Twilio webhook:** point the number's incoming-message webhook (HTTP POST) at `https://your-api.onrender.com/api/users/sms/inbound`.
+
+**Bandwidth webhook:** set the messaging application's inbound callback URL to `https://your-api.onrender.com/api/users/sms/bandwidth`.
 
 **Make someone an admin:** `node scripts/make-admin.js <username>` (run from `backend/`). Admin routes require a login token.
 
