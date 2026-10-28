@@ -199,6 +199,7 @@ router.post("/sms/bandwidth", async (req, res) => {
   try {
     if (!validBandwidthAuth(req)) return res.status(401).json({ error: "Bad credentials" });
     for (const ev of Array.isArray(req.body) ? req.body : []) {
+      console.log(`[bandwidth inbound] ${ev.type} from=...${String(ev.message?.from || "").slice(-4)}`);
       if (ev.type === "message-received") {
         await handleInbound(normalizePhoneNumber(ev.message?.from), String(ev.message?.text || ""));
       }

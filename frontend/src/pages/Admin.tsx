@@ -112,7 +112,7 @@ export default function Admin() {
               {btn('Queue it', () => post(`${base}/invite`, { uids, note, sendAt: new Date(sendAt).toISOString() }, r => `Queued ${r.queued}`), noPicks || !sendAt)}
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-              {btn('2. Confirm roster (picked = playing)', () => post(`${base}/select`, { selected: uids, note }, r => `${r.picked} selected, ${r.dropped} told they are out`), noPicks, true)}
+              {btn('2. Confirm roster (picked = playing)', () => post(`${base}/select`, { selected: uids, note }, r => `${r.picked} selected and texted, ${r.dropped} left out (no text)`), noPicks, true)}
               {btn('3. Send schedule with names', () => post(`${base}/schedule`, { note }, r => `Schedule sent to ${r.sent}`), false, true)}
             </div>
             <div style={{ fontSize: 12, color: 'var(--gray-500)', marginTop: 8 }}>
