@@ -1,0 +1,7 @@
+{
+  "tool_name": "mcp__claude-in-chrome__tabs_close_mcp",
+  "tool_input_preview": "{\"tabId\":725755375}",
+  "error": "Tab 725755375 is not in Claude's tab group for this session. Tools can only target tabs inside the group. Call tabs_context_mcp to list valid tabs (or create the group with createIfEmpty: true), or tabs_create_mcp to add a tab.",
+  "timestamp": "2026-10-28T01:20:03.851Z",
+  "retry_count": 1
+}

@@ -110,10 +110,22 @@ The app will run at: `http://localhost:5173`
 
 ---
 
-## Hosting
-Hosting for the sponsor's setup has not been decided yet. The previous Render deployment is no longer in use.
+## Hosting (Render)
 
----
+The app runs as one always-on service: the API, the built frontend and the 60-second text scheduler all live in a single Node process, with a Postgres database next to it. The iPad just opens the web address in Safari. `render.yaml` describes both pieces (about $13 a month: web "starter" plus database "basic-256mb"; check render.com/pricing). Do not use Render's free plans for real use: the free web service sleeps, so queued texts and reminders stop, and the free database is deleted after 30 days.
+
+**Deploy (about 10 minutes, one time):**
+1. Create a Render account and connect the GitHub repo that holds this code.
+2. New > Blueprint > choose the repo. Render reads `render.yaml`, creates the database and the web service, and builds it.
+3. Open the service's address (`https://<name>.onrender.com`). Create an account in the app.
+4. Make yourself an admin: in the service's **Shell** tab run `node backend/scripts/make-admin.js <your username>`, then sign out and back in. The Admin tab appears.
+5. In **Environment**, set `VENUE_TZ` to the venue's timezone (for example `America/Chicago`). Game times in texts use it.
+
+**iPad:** open the address in Safari > Share > Add to Home Screen. Settings > Accessibility > Guided Access keeps it in the app. Set Auto-Lock to Never. Tap the screen once per session so the scream can play.
+
+**Turn on real texts:** see "Text Messaging" below. Add the provider's keys under **Environment**, point the provider's webhook at this service (the addresses are listed below), and delete the `SMS_DRY_RUN` variable. Until then texts are only logged. Carrier registration (10DLC) is required before texts reach players.
+
+**Timezones:** every time is stored as a UTC moment, so the server's timezone doesn't matter. Browsers show times in their own timezone, and texts use `VENUE_TZ`.
 
 ## API Endpoints
 
@@ -192,6 +204,14 @@ TWILIO_FROM_NUMBER=+1XXXXXXXXXX
 PUBLIC_BASE_URL=https://your-api.onrender.com   # used to verify Twilio webhook signatures
 SMS_DRY_RUN=1                                   # log texts instead of sending (dev/testing)
 ```
+**Telnyx (alternative):** set these and texts go through Telnyx (it wins over Bandwidth and Twilio; `SMS_PROVIDER=twilio|bandwidth|telnyx` forces one):
+```
+TELNYX_API_KEY=...
+TELNYX_FROM_NUMBER=+1XXXXXXXXXX
+TELNYX_PUBLIC_KEY=...             # Mission Control > Keys & Credentials > Public Key; verifies webhook signatures
+```
+Telnyx webhook: set the messaging profile's webhook URL to `https://your-api.onrender.com/api/users/sms/telnyx`.
+
 **Bandwidth Build (alternative to Twilio):** if all of these are set, texts go through Bandwidth instead of Twilio. The free trial texts only your verified mobile number, ASCII only, 129 characters or fewer, 6 per minute:
 ```
 BANDWIDTH_ACCOUNT_ID=...          # numeric account id (decode it from the OAuth token's "accounts" claim)
@@ -210,6 +230,6 @@ With no provider keys, or with `SMS_DRY_RUN=1`, texts are only logged and shown 
 
 **Make someone an admin:** `node scripts/make-admin.js <username>` (run from `backend/`). Admin routes require a login token.
 
-**Checks:** with the server running as `TZ=UTC SMS_DRY_RUN=1 node server.js`, run `node scripts/check-sms-flow.js http://localhost:3001` for an end-to-end test of the whole text flow. `node scripts/send-test-sms.js +1XXXXXXXXXX "text"` sends one real text. Note the Twilio free trial only allows preset template bodies.
+**Checks:** with the server running as `SMS_DRY_RUN=1 node server.js`, run `node scripts/check-sms-flow.js http://localhost:3001` for an end-to-end test of the whole text flow. `node scripts/send-test-sms.js +1XXXXXXXXXX "text"` sends one real text. Note the Twilio free trial only allows preset template bodies.
 
 **Limits:** US carriers require 10DLC registration before real texts reach players reliably. Game times are stored without a timezone, so the server timezone should match the players' (or reminders will be off by the difference).

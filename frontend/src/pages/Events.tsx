@@ -22,7 +22,7 @@ function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreat
     try {
       await apiFetch('/api/games', {
         method: 'POST',
-        body: JSON.stringify({ location, time: `${date}T${time}`, username }),
+        body: JSON.stringify({ location, time: new Date(`${date}T${time}`).toISOString(), username }),
       });
       onCreated();
       onClose();

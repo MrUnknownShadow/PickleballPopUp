@@ -1,0 +1,27 @@
+# Render Blueprint: one web service (API + built frontend + text scheduler) and one Postgres database.
+# Deploy: Render dashboard > New > Blueprint > pick this repo. Prices: web "starter" and database
+# "basic-256mb" are the smallest always-on paid plans (check render.com/pricing); free plans sleep/expire.
+databases:
+  - name: pickleball-db
+    databaseName: pickleball
+    plan: basic-256mb
+
+services:
+  - type: web
+    name: pickleball
+    runtime: node
+    plan: starter
+    buildCommand: cd frontend && npm ci && VITE_API_URL= npm run build && cd ../backend && npm ci
+    startCommand: cd backend && node server.js
+    healthCheckPath: /api/games
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pickleball-db
+          property: connectionString
+      - key: VENUE_TZ # timezone texts print game times in (IANA name)
+        value: America/Chicago
+      - key: SMS_DRY_RUN # texts are only logged until you remove this and add a text provider's keys
+        value: "1"

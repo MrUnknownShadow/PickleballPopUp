@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const db = require("../db");
 
 const { createSession } = require("../auth");
-const { validTwilioSignature, validBandwidthAuth } = require("../sms");
+const { validTwilioSignature, validBandwidthAuth, validTelnyxSignature } = require("../sms");
 const { handleReply } = require("../notify");
 
 const router = express.Router();
@@ -189,6 +189,21 @@ router.post("/sms/inbound", async (req, res) => {
     if (!validTwilioSignature(req)) return res.status(403).json({ error: "Bad signature" });
     await handleInbound(normalizePhoneNumber(req.body.from || req.body.From), String(req.body.body || req.body.Body || ""));
     res.status(204).send();
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/* TELNYX WEBHOOK: set the messaging profile's webhook URL to /api/users/sms/telnyx */
+router.post("/sms/telnyx", async (req, res) => {
+  try {
+    if (!validTelnyxSignature(req)) return res.status(403).json({ error: "Bad signature" });
+    const ev = req.body?.data;
+    console.log(`[telnyx inbound] ${ev?.event_type}`);
+    if (ev?.event_type === "message.received" && ev.payload?.direction === "inbound") {
+      await handleInbound(normalizePhoneNumber(ev.payload.from?.phone_number), String(ev.payload.text || ""));
+    }
+    res.status(200).send();
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

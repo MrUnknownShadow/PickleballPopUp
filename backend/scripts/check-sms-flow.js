@@ -1,6 +1,6 @@
 // End-to-end check of the text flow in dry-run mode (no Twilio keys needed). Usage:
 //   node scripts/check-sms-flow.js [apiBase]      (server must be running; default http://localhost:3001)
-// Server must run with TZ=UTC SMS_DRY_RUN=1 (TZ matches the Postgres clock). Creates throwaway e2e_* users and one event, then deletes them.
+// Server should run with SMS_DRY_RUN=1 (server timezone no longer matters: all timestamps are UTC). Creates throwaway e2e_* users and one event, then deletes them.
 require("dotenv").config({ quiet: true });
 const assert = require("assert");
 const db = require("../src/db");
@@ -41,7 +41,7 @@ const count = (log, kind, status) => log.filter((m) => m.kind === kind && m.dire
 
   // event tomorrow noon
   const t = new Date(Date.now() + 36 * 3600e3); t.setMinutes(0, 0, 0);
-  const iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}T12:00`;
+  const iso = t.toISOString();
   await call("/api/games", { method: "POST", body: { location: `e2e court ${run}`, time: iso, username: admin } });
   const gid = (await db.query("SELECT GID FROM Games WHERE Location = $1", [`e2e court ${run}`])).rows[0].gid;
   const statusOf = async () => Object.fromEntries((await call(`/api/admin/games/${gid}/players`, { token })).data.filter((p) => p.username.startsWith(`e2e_${run}`)).map((p) => [p.username, p.status]));
@@ -86,7 +86,7 @@ const count = (log, kind, status) => log.filter((m) => m.kind === kind && m.dire
   assert(names.slice(0, 4).every((n) => sched[0].body.includes(n)) && sched[0].body.includes("Court 3"));
 
   // 5. day-before reminder: move game to +2h, run scheduler
-  await db.query("UPDATE Games SET GameTime = NOW() + INTERVAL '2 hours' WHERE GID = $1", [gid]); // DB clock: server must run with TZ=UTC
+  await db.query("UPDATE Games SET GameTime = NOW() + INTERVAL '2 hours' WHERE GID = $1", [gid]); // DB clock (UTC)
   await call("/api/admin/run-scheduler", { method: "POST", token });
   assert.equal(count(await outbox(token), "reminder", "dry_run"), 4);
   await call("/api/admin/run-scheduler", { method: "POST", token });

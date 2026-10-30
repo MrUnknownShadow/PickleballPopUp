@@ -4,10 +4,10 @@ const { sendSmsToUser, log } = require("./sms");
 const ROW = `Users.UID AS uid, Users.Username AS username, Users.PhoneNumber AS phonenumber, Users.SmsOptIn AS smsoptin,
   Games.GID AS gid, Games.GameTime AS gametime, Games.Location AS location, GamePlayers.InviteNote AS invitenote`;
 
-// Stored GameTime is a naive wall-clock timestamp, so format it in server-local time without conversion.
-// ponytail: assumes server TZ == players' TZ; store a timezone on Games if they ever differ.
+// GameTime is a UTC moment; texts print it in the venue's timezone (VENUE_TZ, an IANA name like America/Chicago).
+// ponytail: one venue timezone for the whole app; store a timezone on Games if venues ever differ.
 function when(t) {
-  return new Date(t).toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return new Date(t).toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: process.env.VENUE_TZ || "America/Chicago" });
 }
 const withNote = (text, note) => (note && note.trim() ? `${text}\n\n${note.trim()}` : text);
 

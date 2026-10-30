@@ -16,19 +16,32 @@ async function bandwidthToken(id, secret) {
   return bwToken;
 }
 
-// Sends via Bandwidth Build when all BANDWIDTH_* vars are set, else Twilio (REST via fetch, no SDK).
+// Sends via Telnyx, Bandwidth Build or Twilio (REST via fetch, no SDK). SMS_PROVIDER=telnyx|bandwidth|twilio
+// picks one; otherwise the first provider whose variables are all set wins, in that order.
 // Without credentials, or with SMS_DRY_RUN=1, it logs instead of sending, so dev and teammates
 // without an account can run the app.
 async function sendSms(to, body) {
   const { TWILIO_ACCOUNT_SID: sid, TWILIO_AUTH_TOKEN: token, TWILIO_FROM_NUMBER: from } = process.env;
   const { BANDWIDTH_ACCOUNT_ID: bwAcct, BANDWIDTH_CLIENT_ID: bwId, BANDWIDTH_CLIENT_SECRET: bwSecret,
           BANDWIDTH_APPLICATION_ID: bwApp, BANDWIDTH_FROM_NUMBER: bwFrom } = process.env;
-  const bandwidth = bwAcct && bwId && bwSecret && bwApp && bwFrom;
-  if (process.env.SMS_DRY_RUN === "1" || !(bandwidth || (sid && token && from))) {
+  const { TELNYX_API_KEY: tlKey, TELNYX_FROM_NUMBER: tlFrom, SMS_PROVIDER: want } = process.env;
+  const ready = { telnyx: tlKey && tlFrom, bandwidth: bwAcct && bwId && bwSecret && bwApp && bwFrom, twilio: sid && token && from };
+  const provider = want ? (ready[want] ? want : null) : ["telnyx", "bandwidth", "twilio"].find((p) => ready[p]);
+  if (process.env.SMS_DRY_RUN === "1" || !provider) {
     console.log(`[sms dry-run] to=${to} body=${JSON.stringify(body)}`);
     return { dryRun: true };
   }
-  if (bandwidth) {
+  if (provider === "telnyx") {
+    const res = await fetch("https://api.telnyx.com/v2/messages", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${tlKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: tlFrom, to, text: body }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(`Telnyx ${res.status}: ${data.errors?.[0]?.detail || data.errors?.[0]?.title || JSON.stringify(data)}`);
+    return { sid: data.data?.id, status: data.data?.to?.[0]?.status || "queued" };
+  }
+  if (provider === "bandwidth") {
     // Build trial rejects non-ASCII (curly quotes, dashes, emoji) and only texts the verified number.
     const text = body.replace(/[\u2018\u2019]/g, "'").replace(/[\u201c\u201d]/g, '"').replace(/[\u2013\u2014]/g, "-").replace(/[^\x00-\x7F]/g, "");
     const res = await fetch(`https://api.bandwidth.com/v1/build/accounts/${bwAcct}/messages`, {
@@ -85,7 +98,7 @@ async function sendSmsToUser(user, body, { kind, gid } = {}) {
 function validTwilioSignature(req) {
   const token = process.env.TWILIO_AUTH_TOKEN;
   if (!token || process.env.SMS_DRY_RUN === "1") return true; // dry-run / local dev
-  const base = process.env.PUBLIC_BASE_URL;
+  const base = process.env.PUBLIC_BASE_URL || process.env.RENDER_EXTERNAL_URL; // Render sets the latter
   if (!base) return false;
   const params = req.body || {};
   const data = base + req.originalUrl + Object.keys(params).sort().map((k) => k + params[k]).join("");
@@ -104,4 +117,17 @@ function validBandwidthAuth(req) {
   return got.length === expected.length && require("crypto").timingSafeEqual(Buffer.from(got), Buffer.from(expected));
 }
 
-module.exports = { sendSms, sendSmsToUser, log, validTwilioSignature, validBandwidthAuth };
+// Telnyx signs webhooks with Ed25519 over `${timestamp}|${raw body}`; TELNYX_PUBLIC_KEY is the base64 key from
+// Mission Control > Keys & Credentials > Public Key. Unset = unchecked (dev only).
+function validTelnyxSignature(req) {
+  const key = process.env.TELNYX_PUBLIC_KEY;
+  if (!key || process.env.SMS_DRY_RUN === "1") return true;
+  const ts = req.get("telnyx-timestamp") || "", sig = req.get("telnyx-signature-ed25519") || "";
+  if (!ts || !sig || !req.rawBody || Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false;
+  try {
+    const pub = require("crypto").createPublicKey({ key: Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), Buffer.from(key, "base64")]), format: "der", type: "spki" });
+    return require("crypto").verify(null, Buffer.concat([Buffer.from(`${ts}|`), req.rawBody]), pub, Buffer.from(sig, "base64"));
+  } catch { return false; }
+}
+
+module.exports = { sendSms, sendSmsToUser, log, validTwilioSignature, validBandwidthAuth, validTelnyxSignature };
