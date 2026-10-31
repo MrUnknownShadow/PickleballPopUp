@@ -6,10 +6,13 @@ const gamesRouter = require("./src/routes/games");
 const usersRouter = require("./src/routes/users");
 const adminRouter = require("./src/routes/admin");
 const notify = require("./src/notify");
+const availability = require("./src/availability");
+const week = require("./src/routes/week");
 const fs = require("fs");
 const path = require("path");
 
 const app = express();
+app.set("trust proxy", 1); // behind Render's proxy: req.ip is the real client (needed for login rate limits)
 
 app.use(cors({
   origin: process.env.FRONTEND_URL || "http://localhost:5173",
@@ -19,7 +22,9 @@ app.use(express.urlencoded({ extended: false })); // Twilio webhooks are form-en
 
 app.use("/api/games", gamesRouter);
 app.use("/api/users", usersRouter);
+app.use("/api/admin/week", week.admin);
 app.use("/api/admin", adminRouter);
+app.use("/api/schedule", week.schedule);
 
 // Production: serve the built frontend (frontend/dist) from this same server, so the app has one address
 // and no CORS setup. Skipped in dev, where Vite serves the frontend.
@@ -50,6 +55,7 @@ async function start() {
   setInterval(() => {
     notify.sendDueInvites().catch((e) => console.error("invites:", e.message));
     notify.sendDueReminders().catch((e) => console.error("reminders:", e.message));
+    availability.tick().catch((e) => console.error("weekly blast:", e.message));
   }, 60 * 1000);
   app.listen(PORT, () => console.log(`Server on ${PORT}`));
 }

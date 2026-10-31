@@ -182,11 +182,15 @@ The app runs as one always-on service: the API, the built frontend and the 60-se
 
 ---
 
-## Known Limitations & Security Notes
-- The server does not verify identity after login. The frontend sends the username with each request and the server trusts it, so there are no tokens and no admin role. Suitable for a small trusted group only.
-- `DELETE /api/games/reset` is unprotected: anyone who can reach the API can wipe all data.
+## Security and Known Limitations
+- **Sign-in:** username plus 4-digit PIN (bcrypt). Wrong guesses are limited to 8 per 15 minutes per client and name, then the server answers 429. The limit is held in memory, so it resets when the server restarts and applies to one server only.
+- **Who is acting:** every change to events, scores and chat uses the signed-in user from the login token, never a name sent in the request. Only the host can delete an event or end its session. Profiles and settings (which include the phone number) are readable and editable only by their owner or an admin. The list of all accounts and `DELETE /api/games/reset` are admin-only.
+- **Scores** must be whole numbers 0 to 99 and cannot tie; a finished game cannot be re-scored.
+- **Text webhooks:** Twilio and Telnyx requests are signature-checked. Bandwidth does not sign callbacks, so set `BANDWIDTH_WEBHOOK_KEY` and add `?key=<that value>` to the callback address (or turn on Basic auth in the application and set `BANDWIDTH_WEBHOOK_USER` / `BANDWIDTH_WEBHOOK_PASSWORD`). Without one of these anyone can post a fake reply for a phone number.
+- **The schedule page is public:** anyone with the link sees usernames and game times for the week.
 - The leaderboard and history only include games from sessions that have been ended.
-- Screen Wake Lock only works on HTTPS or `localhost`, so it does nothing if the app is opened over a plain-http LAN address.
+- Screen Wake Lock only works on HTTPS or `localhost`, so it does nothing over a plain-http LAN address.
+- **Checks:** with a throwaway server running as `SMS_DRY_RUN=1 PORT=3002 node server.js`, run `node scripts/check-abuse.js http://localhost:3002` (hostile input, PIN guessing, impersonation) and `node scripts/check-game-flow.js http://localhost:3002` (a normal session).
 
 ---
 
@@ -194,7 +198,9 @@ The app runs as one always-on service: the API, the built frontend and the 60-se
 
 Scheduling runs on text messages sent through Twilio. The website is the admin's control panel (Admin tab).
 
-**Flow:** admin picks players and asks availability (now, or queued for Sunday) -> players reply YES / NO by text -> admin confirms the final roster (players picked are texted that they are in; players not picked get no text and no longer see the event) -> admin sends the schedule (lists everyone playing) -> a reminder goes out automatically within 24 hours of the game. Every text can carry a custom admin comment. Players who text STOP are opted out.
+**Weekly availability (the main flow):** every Sunday at 2 PM (venue time) the app texts all opted-in players "which days can you play this week?". Players reply with days: `M T W Th F`, `MWF`, `Tuesday and Thursday`, `all`, or `None`/`N/A`. The latest reply replaces earlier ones; no reply means not available; replies after the cutoff (6 hours by default) are kept but marked late; anything unreadable lands in "Needs your review" for the admin to fix. The Admin tab groups replies by day (a player can appear under several days). The admin ticks who plays each day, sets the time and place, and clicks **Confirm**. Each day with players becomes a normal event, ticked players get one text ("You've been selected for Tuesday, Thursday. Full schedule (sign in): ...") and players nobody picked get no text. The link opens `/schedule`, which asks for a login first and then shows who is playing which day. The normal day-before reminder goes to confirmed players. Wording, times and the on/off switch live in "Message wording and timing" on that page. **Automatic Sunday sending is off until the admin ticks it**, so nothing goes out by surprise. Checks: `node scripts/check-days.js` (reply parser) and, with the server running as `SMS_DRY_RUN=1 node server.js`, `node scripts/check-week-flow.js`.
+
+**Older single-event flow:** admin picks players and asks availability (now, or queued for Sunday) -> players reply YES / NO by text -> admin confirms the final roster (players picked are texted that they are in; players not picked get no text and no longer see the event) -> admin sends the schedule (lists everyone playing) -> a reminder goes out automatically within 24 hours of the game. Every text can carry a custom admin comment. Players who text STOP are opted out.
 
 **Setup (backend/.env):**
 ```

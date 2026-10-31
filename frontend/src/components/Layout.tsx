@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, CalendarDays, Trophy, ClipboardList, Settings as SettingsIcon, MessageSquare, Menu, X, LogOut } from 'lucide-react';
+import { Calendar, CalendarCheck, CalendarDays, Trophy, ClipboardList, Settings as SettingsIcon, MessageSquare, Menu, X, LogOut } from 'lucide-react';
 
 const baseNavItems = [
   { to: '/events', label: 'Events', icon: Calendar },
+  { to: '/schedule', label: 'Schedule', icon: CalendarCheck },
   { to: '/calendar', label: 'Calendar', icon: CalendarDays },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { to: '/history', label: 'Game History', icon: ClipboardList },

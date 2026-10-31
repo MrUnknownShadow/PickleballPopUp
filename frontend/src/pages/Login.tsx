@@ -137,7 +137,9 @@ export default function Login() {
         await login(name, pin);
       }
 
-      navigate('/events');
+      // Back to the page the user was sent from (only an in-app path, never an outside address).
+      const next = new URLSearchParams(window.location.search).get('next');
+      navigate(next && next.startsWith('/') && !next.startsWith('//') ? next : '/events');
     } catch (err) {
       setError(
         err instanceof Error

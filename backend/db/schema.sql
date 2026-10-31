@@ -103,3 +103,31 @@ CREATE TABLE IF NOT EXISTS SmsLog (
     Error TEXT,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Weekly availability: Sunday blast asks which days (Mon-Fri) players can play; replies are stored per week.
+CREATE TABLE IF NOT EXISTS Settings (
+    Key VARCHAR(40) PRIMARY KEY,
+    Value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS WeeklyPolls (
+    WeekStart DATE PRIMARY KEY,           -- the Monday of the week being scheduled
+    SentAt TIMESTAMP NOT NULL DEFAULT NOW(),
+    CutoffAt TIMESTAMP NOT NULL           -- replies after this are kept but marked late
+);
+
+CREATE TABLE IF NOT EXISTS Availability (
+    WeekStart DATE NOT NULL,
+    UID INTEGER NOT NULL REFERENCES Users(UID) ON DELETE CASCADE,
+    Days VARCHAR(20) NOT NULL DEFAULT '',   -- e.g. '1,3,5' (1 = Monday)
+    Status VARCHAR(10) NOT NULL,            -- days | none | unclear | manual
+    Raw TEXT,
+    Late BOOLEAN NOT NULL DEFAULT FALSE,
+    NotifiedDays VARCHAR(20) NOT NULL DEFAULT '', -- days the player was last told they are confirmed for
+    UpdatedAt TIMESTAMP NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (WeekStart, UID)
+);
+
+-- A confirmed day becomes a normal event, so reminders, the calendar and scorekeeping all work on it.
+ALTER TABLE Games ADD COLUMN IF NOT EXISTS PollWeek DATE;
+ALTER TABLE Games ADD COLUMN IF NOT EXISTS PollDay SMALLINT;

@@ -9,21 +9,25 @@ async function createSession(uid) {
   return token;
 }
 
-// Bearer-token check for admin-only routes. Other routes still trust the client username (see README).
-async function requireAdmin(req, res, next) {
+// Bearer-token checks: requireUser for any signed-in player, requireAdmin for admins only. Older routes still trust
+// the client username (see README).
+const requireUser = (req, res, next) => check(req, res, next, false);
+const requireAdmin = (req, res, next) => check(req, res, next, true);
+
+async function check(req, res, next, adminOnly) {
   try {
     const token = (req.get("authorization") || "").replace(/^Bearer /, "");
     if (!token) return res.status(401).json({ error: "Sign in again" });
     const { rows } = await db.query(
-      `SELECT Users.UID, Users.Username, Users.IsAdmin
+      `SELECT Users.UID AS uid, Users.Username AS username, Users.IsAdmin AS isadmin
        FROM Sessions JOIN Users ON Users.UID = Sessions.UID
        WHERE Sessions.Token = $1
          AND Sessions.CreatedAt > NOW() - ($2 || ' days')::interval`,
       [token, String(SESSION_DAYS)]
     );
     if (!rows[0]) return res.status(401).json({ error: "Sign in again" });
-    if (!rows[0].isadmin) return res.status(403).json({ error: "Admins only" });
-    req.admin = rows[0];
+    if (adminOnly && !rows[0].isadmin) return res.status(403).json({ error: "Admins only" });
+    req.user = req.admin = rows[0];
     next();
   } catch (e) {
     console.error(e);
@@ -31,4 +35,4 @@ async function requireAdmin(req, res, next) {
   }
 }
 
-module.exports = { createSession, requireAdmin };
+module.exports = { createSession, requireAdmin, requireUser };

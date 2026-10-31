@@ -42,7 +42,7 @@ const count = (log, kind, status) => log.filter((m) => m.kind === kind && m.dire
   // event tomorrow noon
   const t = new Date(Date.now() + 36 * 3600e3); t.setMinutes(0, 0, 0);
   const iso = t.toISOString();
-  await call("/api/games", { method: "POST", body: { location: `e2e court ${run}`, time: iso, username: admin } });
+  await call("/api/games", { method: "POST", token, body: { location: `e2e court ${run}`, time: iso } });
   const gid = (await db.query("SELECT GID FROM Games WHERE Location = $1", [`e2e court ${run}`])).rows[0].gid;
   const statusOf = async () => Object.fromEntries((await call(`/api/admin/games/${gid}/players`, { token })).data.filter((p) => p.username.startsWith(`e2e_${run}`)).map((p) => [p.username, p.status]));
 

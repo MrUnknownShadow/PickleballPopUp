@@ -4,6 +4,7 @@ const { Pool, types, defaults } = require("pg");
 // timezone never changes what is stored or shown (event times are sent as exact moments by the browser).
 types.setTypeParser(1114, (s) => new Date(s.replace(" ", "T") + "Z"));
 defaults.parseInputDatesAsUTC = true;
+types.setTypeParser(1082, (s) => s); // DATE columns stay 'YYYY-MM-DD' strings (no timezone shifts)
 
 const isLocal = /localhost|127\.0\.0\.1/.test(process.env.DATABASE_URL || "");
 

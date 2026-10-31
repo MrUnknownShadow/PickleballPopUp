@@ -2,11 +2,40 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const db = require("../db");
 
-const { createSession } = require("../auth");
+const { createSession, requireUser, requireAdmin } = require("../auth");
 const { validTwilioSignature, validBandwidthAuth, validTelnyxSignature } = require("../sms");
 const { handleReply } = require("../notify");
 
 const router = express.Router();
+
+// Usernames are text only: 1-30 characters, no control characters (a stray NUL or a 5000-character name used to crash the server).
+function cleanUsername(v) {
+  if (typeof v !== "string") return null;
+  const name = v.trim();
+  return name.length >= 1 && name.length <= 30 && !/[\u0000-\u001f\u007f]/.test(name) ? name : null;
+}
+
+// Wrong-PIN guesses: 8 per 15 minutes per client and name (and 40 per name overall), then 429. In memory, so one server only.
+const WINDOW_MS = 15 * 60e3;
+const failures = new Map();
+function lockedFor(key, max) {
+  const f = failures.get(key);
+  if (!f) return 0;
+  if (Date.now() - f.first > WINDOW_MS) { failures.delete(key); return 0; }
+  return f.n >= max ? Math.ceil((f.first + WINDOW_MS - Date.now()) / 60e3) : 0;
+}
+function recordFailure(key) {
+  const f = failures.get(key);
+  if (!f || Date.now() - f.first > WINDOW_MS) failures.set(key, { n: 1, first: Date.now() });
+  else f.n++;
+  if (failures.size > 5000) failures.clear();
+}
+
+// Only the owner of a profile (or an admin) may read or change it. Needs requireUser first.
+function ownerOrAdmin(req, res, next) {
+  if (req.user.isadmin || req.user.username.toLowerCase() === String(req.params.username).toLowerCase()) return next();
+  res.status(403).json({ error: "That is not your account" });
+}
 
 function validPin(pin) {
   return /^\d{4}$/.test(String(pin || ""));
@@ -25,7 +54,7 @@ function validPhoneNumber(phoneNumber) {
 /* CREATE ACCOUNT */
 router.post("/register", async (req, res) => {
   try {
-    const username = String(req.body.username || "").trim();
+    const username = cleanUsername(req.body.username);
     const pin = String(req.body.pin || "");
     const phoneNumber = normalizePhoneNumber(req.body.phoneNumber);
     // Opt-in by default; texts only go out once a phone number is on file.
@@ -33,7 +62,7 @@ router.post("/register", async (req, res) => {
 
     if (!username) {
       return res.status(400).json({
-        error: "Username is required",
+        error: "Username must be 1 to 30 characters",
       });
     }
 
@@ -84,7 +113,7 @@ router.post("/register", async (req, res) => {
 });
 
 /* GET ACCOUNT SETTINGS */
-router.get("/:username", async (req, res) => {
+router.get("/:username", requireUser, ownerOrAdmin, async (req, res) => {
   try {
     const { rows } = await db.query(
       `SELECT UID, Username, Email, PhoneNumber, SmsOptIn, CreatedAt
@@ -104,7 +133,7 @@ router.get("/:username", async (req, res) => {
 });
 
 /* UPDATE ACCOUNT SETTINGS */
-router.patch("/:username/settings", async (req, res) => {
+router.patch("/:username/settings", requireUser, ownerOrAdmin, async (req, res) => {
   try {
     const phoneNumber = normalizePhoneNumber(req.body.phoneNumber);
     const smsOptIn = req.body.smsOptIn === true;
@@ -213,6 +242,9 @@ router.post("/sms/telnyx", async (req, res) => {
 router.post("/sms/bandwidth", async (req, res) => {
   try {
     if (!validBandwidthAuth(req)) return res.status(401).json({ error: "Bad credentials" });
+    // Optional shared secret in the callback address (.../sms/bandwidth?key=...), for when Basic auth is not set on the application.
+    const key = process.env.BANDWIDTH_WEBHOOK_KEY;
+    if (key && !(typeof req.query.key === "string" && req.query.key.length === key.length && require("crypto").timingSafeEqual(Buffer.from(req.query.key), Buffer.from(key)))) return res.status(401).json({ error: "Bad key" });
     for (const ev of Array.isArray(req.body) ? req.body : []) {
       console.log(`[bandwidth inbound] ${ev.type} from=...${String(ev.message?.from || "").slice(-4)}`);
       if (ev.type === "message-received") {
@@ -228,7 +260,7 @@ router.post("/sms/bandwidth", async (req, res) => {
 /* LOGIN */
 router.post("/login", async (req, res) => {
   try {
-    const username = String(req.body.username || "").trim();
+    const username = cleanUsername(req.body.username);
     const pin = String(req.body.pin || "");
 
     if (!username || !validPin(pin)) {
@@ -236,6 +268,11 @@ router.post("/login", async (req, res) => {
         error: "Username and 4-digit PIN are required",
       });
     }
+
+    const who = username.toLowerCase();
+    const keys = [[`${req.ip}|${who}`, 8], [`name|${who}`, 40]];
+    const wait = Math.max(...keys.map(([k, max]) => lockedFor(k, max)));
+    if (wait) return res.status(429).json({ error: `Too many wrong PINs. Try again in ${wait} minute${wait === 1 ? "" : "s"}.` });
 
     const { rows } = await db.query(
       `SELECT UID, Username, PinHash, IsAdmin
@@ -246,22 +283,15 @@ router.post("/login", async (req, res) => {
 
     const user = rows[0];
 
-    if (!user || !user.pinhash) {
-      return res.status(401).json({
-        error: "Invalid username or PIN",
-      });
-    }
-
-    const matches = await bcrypt.compare(
-      pin,
-      user.pinhash
-    );
+    const matches = user && user.pinhash ? await bcrypt.compare(pin, user.pinhash) : false;
 
     if (!matches) {
+      keys.forEach(([k]) => recordFailure(k));
       return res.status(401).json({
         error: "Invalid username or PIN",
       });
     }
+    failures.delete(keys[0][0]);
 
     res.json({
       uid: user.uid,
@@ -278,7 +308,7 @@ router.post("/login", async (req, res) => {
 });
 
 /* GET USERS */
-router.get("/", async (req, res) => {
+router.get("/", requireAdmin, async (req, res) => {
   try {
     const { rows } = await db.query(
       `SELECT UID, Username, Email, CreatedAt

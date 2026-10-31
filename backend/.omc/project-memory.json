@@ -1,0 +1,105 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1793471212297,
+  "projectRoot": "/Users/shadow/Documents/New/PickleballPopUp/backend",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "express",
+        "version": "5.2.1",
+        "category": "backend"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": "npm run dev",
+    "scripts": {
+      "dev": "nodemon --exec \"node server.js\"",
+      "start": "node server.js"
+    }
+  },
+  "conventions": {
+    "namingStyle": "camelCase",
+    "importStyle": "CommonJS",
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "scripts",
+      "src"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "db": {
+      "path": "db",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1793471212271,
+      "keyFiles": [
+        "schema.sql"
+      ]
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 6,
+      "lastAccessed": 1793471212273,
+      "keyFiles": [
+        "check-days.js",
+        "check-sms-flow.js",
+        "check-week-flow.js",
+        "init_db.sh",
+        "make-admin.js"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 8,
+      "lastAccessed": 1793471212283,
+      "keyFiles": [
+        "auth.js",
+        "availability.js",
+        "days.js",
+        "db.js",
+        "notify.js"
+      ]
+    },
+    "src/routes": {
+      "path": "src/routes",
+      "purpose": "Route handlers",
+      "fileCount": 5,
+      "lastAccessed": 1793471212285,
+      "keyFiles": [
+        "admin.js",
+        "conversations.js",
+        "games.js"
+      ]
+    }
+  },
+  "hotPaths": [],
+  "userDirectives": []
+}

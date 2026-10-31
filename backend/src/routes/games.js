@@ -1,7 +1,24 @@
 const express = require("express");
 const db = require("../db");
 
+const { requireUser, requireAdmin } = require("../auth");
+
 const router = express.Router();
+
+// Final scores: whole numbers 0-99 and never a tie (a tie used to be recorded as a Team B win, which corrupted the leaderboard).
+function scoreError(a, b) {
+  const x = Number(a), y = Number(b);
+  if (a === "" || b === "" || a === null || b === null || !Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x > 99 || y > 99) return "Scores must be whole numbers from 0 to 99";
+  if (x === y) return "A game cannot end in a tie. Play on until one team leads.";
+  return null;
+}
+
+// Every change (anything but GET) needs a signed-in user, and the acting username always comes from the login token,
+// never from the request body, so nobody can act as the host or as another player by sending their name.
+router.use((req, res, next) => {
+  if (req.method === "GET") return next();
+  requireUser(req, res, () => { req.body = { ...req.body, username: req.user.username }; next(); });
+});
 
 /* GET ALL EVENTS */
 router.get("/", async (req, res) => {
@@ -107,7 +124,8 @@ router.get("/history", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     let { location, time, username } = req.body;
-    if (!location || !time) return res.status(400).json({ error: "Missing fields" });
+    if (typeof location !== "string" || !location.trim() || location.length > 100) return res.status(400).json({ error: "Location must be 1 to 100 characters" });
+    if (typeof time !== "string" || Number.isNaN(new Date(time).getTime())) return res.status(400).json({ error: "Enter a valid date and time" });
 
     location = location.trim().toLowerCase();
     username = username?.trim().toLowerCase();
@@ -198,9 +216,9 @@ router.post("/:id/subgame", async (req, res) => {
     const { team1, team2, team1score, team2score } = req.body;
     const gameId = req.params.id;
 
-    if (!team1 || !team2 || team1score === undefined || team2score === undefined) {
-      return res.status(400).json({ error: "Missing data" });
-    }
+    if (!Array.isArray(team1) || !Array.isArray(team2)) return res.status(400).json({ error: "Missing data" });
+    const bad = scoreError(team1score, team2score);
+    if (bad) return res.status(400).json({ error: bad });
 
     // Create sub-game
     const { rows: sgRows } = await db.query(
@@ -244,9 +262,9 @@ router.post("/:id/join", async (req, res) => {
     const username = req.body.username.trim().toLowerCase();
     const gameId = req.params.id;
 
-    await db.query("INSERT INTO Users (Username) VALUES ($1) ON CONFLICT (Username) DO NOTHING", [username]);
-    const { rows } = await db.query("SELECT * FROM Users WHERE Username = $1", [username]);
+    const { rows } = await db.query("SELECT * FROM Users WHERE LOWER(Username) = $1", [username]);
     const user = rows[0];
+    if (!user) return res.status(404).json({ error: "User not found" });
 
     await db.query(
       `INSERT INTO GamePlayers (GID, UID) VALUES ($1, $2)
@@ -348,16 +366,17 @@ router.post("/subgame/:sgid/end", async (req, res) => {
     const { team1score, team2score } = req.body;
     const sgid = req.params.sgid;
 
-    if (team1score === undefined || team2score === undefined) {
-      return res.status(400).json({ error: "Missing score" });
-    }
+    const bad = scoreError(team1score, team2score);
+    if (bad) return res.status(400).json({ error: bad });
 
     const team1wins = parseInt(team1score) > parseInt(team2score);
 
-    await db.query(
-      "UPDATE SubGames SET Team1Score = $1, Team2Score = $2, Status = 'completed', EndedAt = NOW() WHERE SGID = $3",
+    // Only a game still in progress can be finished, so a double tap or a replay cannot overwrite a recorded score.
+    const done = await db.query(
+      "UPDATE SubGames SET Team1Score = $1, Team2Score = $2, Status = 'completed', EndedAt = NOW() WHERE SGID = $3 AND Status = 'in_progress' RETURNING SGID",
       [team1score, team2score, sgid]
     );
+    if (!done.rows.length) return res.status(409).json({ error: "That game is already finished or does not exist" });
     await db.query("UPDATE SubGamePlayers SET IsWinner = $1 WHERE SGID = $2 AND Team = 1", [team1wins, sgid]);
     await db.query("UPDATE SubGamePlayers SET IsWinner = $1 WHERE SGID = $2 AND Team = 2", [!team1wins, sgid]);
 
@@ -405,15 +424,16 @@ router.post("/:id/chat", async (req, res) => {
     const { username, content } = req.body;
     const gameId = req.params.id;
 
-    if (!content) return res.status(400).json({ error: "Empty message" });
+    if (typeof content !== "string" || !content.trim()) return res.status(400).json({ error: "Empty message" });
+    if (content.length > 1000) return res.status(400).json({ error: "Messages can be up to 1000 characters" });
 
-    await db.query("INSERT INTO Users (Username) VALUES ($1) ON CONFLICT (Username) DO NOTHING", [username.toLowerCase()]);
-    const { rows } = await db.query("SELECT * FROM Users WHERE Username = $1", [username.toLowerCase()]);
-    const user = rows[0];
+    const { rows } = await db.query("SELECT UID AS uid FROM Users WHERE LOWER(Username) = $1", [username.toLowerCase()]);
+    if (!rows[0]) return res.status(404).json({ error: "User not found" });
 
+    await db.query("INSERT INTO Conversations (CID) VALUES ($1) ON CONFLICT DO NOTHING", [gameId]); // chat can be posted before it was ever opened
     await db.query(
       "INSERT INTO Messages (CID, SenderUID, Content) VALUES ($1, $2, $3)",
-      [gameId, user.uid, content]
+      [gameId, rows[0].uid, content.trim()]
     );
     res.json({ success: true });
   } catch (e) {
@@ -422,7 +442,7 @@ router.post("/:id/chat", async (req, res) => {
 });
 
 /* RESET */
-router.delete("/reset", async (req, res) => {
+router.delete("/reset", requireAdmin, async (req, res) => {
   try {
     await db.query("DELETE FROM SubGamePlayers");
     await db.query("DELETE FROM SubGames");

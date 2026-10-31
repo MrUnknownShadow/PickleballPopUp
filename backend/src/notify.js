@@ -57,7 +57,12 @@ async function handleReply(phone, text) {
     return;
   }
   const yes = ["YES", "Y"].includes(answer);
-  if (!yes && !["NO", "N"].includes(answer)) return;
+  const yesNo = yes || ["NO", "N"].includes(answer);
+  // A YES/NO answers a per-event invite when one is open; everything else answers the weekly "which days" question.
+  const { rows: invited } = yesNo ? await db.query(
+    "SELECT 1 FROM GamePlayers JOIN Games ON Games.GID = GamePlayers.GID WHERE GamePlayers.UID = $1 AND GamePlayers.Status = 'invited' AND Games.Status = 'scheduled' LIMIT 1", [user.uid]) : { rows: [] };
+  if (!invited.length && await require("./availability").handleReply(user, text)) return;
+  if (!yesNo) return;
   const { rows } = await db.query(
     `SELECT GamePlayers.GID AS gid, Games.GameTime AS gametime, Games.Location AS location FROM GamePlayers
      JOIN Games ON Games.GID = GamePlayers.GID
@@ -116,9 +121,10 @@ async function sendSchedule(gid, note) {
 // Reminder to selected players once the game is within 24h. Runs once per game.
 async function sendDueReminders() {
   const now = new Date();
+  const hours = Number((await require("./settings").getSettings()).reminder_hours) || 24;
   const { rows: games } = await db.query(
     `SELECT GID FROM Games WHERE Status = 'scheduled' AND ReminderSentAt IS NULL AND GameTime > $1 AND GameTime <= $2`,
-    [now, new Date(now.getTime() + 24 * 3600 * 1000)]
+    [now, new Date(now.getTime() + hours * 3600 * 1000)]
   );
   for (const { gid } of games) {
     const { rows } = await db.query(

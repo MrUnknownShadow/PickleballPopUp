@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useApi, useNotification } from '../hooks/useApi';
 import type { Game } from '../types';
+import AdminWeek from './AdminWeek';
 
 interface AdminPlayer { uid: number; username: string; smsoptin: boolean; phonelast4: string | null; status: string | null }
 interface OutboxRow { id: number; username: string | null; kind: string; direction: string; body: string; status: string; error: string | null; createdat: string }
@@ -19,7 +20,7 @@ function nextSunday10(): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-export default function Admin() {
+function EventTexts() {
   const { apiFetch, isAdmin } = useAuth();
   const { show, Notification } = useNotification();
   const { data: games } = useApi<Game[]>('/api/games');
@@ -89,9 +90,7 @@ export default function Admin() {
   const fieldLabel = { display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--gray-700)', marginBottom: 6 } as const;
 
   return (
-    <div className="fade-in">
-      <div className="page-title">Text Messaging</div>
-      <div className="page-subtitle">Work top to bottom: pick players, ask, confirm, send the schedule.</div>
+    <div>
 
       <div className="card" style={{ padding: 16, marginTop: 16 }}>
         <label htmlFor="admin-event" style={fieldLabel}>Event</label>
@@ -183,6 +182,23 @@ export default function Admin() {
         </div>
       </details>
       {Notification}
+    </div>
+  );
+}
+
+export default function Admin() {
+  const { isAdmin } = useAuth();
+  const [tab, setTab] = useState<'week' | 'event'>('week');
+  if (!isAdmin) return <div className="empty-state"><div className="empty-title">Admins only</div></div>;
+  const tabBtn = (id: 'week' | 'event', label: string) => (
+    <button role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`btn btn-block ${tab === id ? 'btn-primary' : 'btn-secondary'}`} style={{ minHeight: 44, justifyContent: 'center' }}>{label}</button>
+  );
+  return (
+    <div className="fade-in">
+      <div className="page-title">Text Messaging</div>
+      <div className="page-subtitle">Weekly availability, schedule and texts</div>
+      <div role="tablist" style={{ display: 'flex', gap: 8, marginTop: 16 }}>{tabBtn('week', 'Weekly schedule')}{tabBtn('event', 'Single-event texts')}</div>
+      {tab === 'week' ? <AdminWeek /> : <EventTexts />}
     </div>
   );
 }
