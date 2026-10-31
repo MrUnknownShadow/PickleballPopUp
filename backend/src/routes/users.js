@@ -85,6 +85,12 @@ router.post("/register", async (req, res) => {
       [username]
     );
 
+    // A phone number belongs to one account: replies are matched to a player by phone.
+    if (phoneNumber) {
+      const taken = await db.query("SELECT 1 FROM Users WHERE PhoneNumber = $1", [phoneNumber]);
+      if (taken.rows.length) return res.status(409).json({ error: "That phone number is already used by another account" });
+    }
+
     if (existing.rows.length > 0) {
       return res.status(409).json({
         error: "Username already exists",
@@ -146,6 +152,11 @@ router.patch("/:username/settings", requireUser, ownerOrAdmin, async (req, res) 
       return res.status(400).json({
         error: "A phone number is required to enable text notifications",
       });
+    }
+
+    if (phoneNumber) {
+      const taken = await db.query("SELECT 1 FROM Users WHERE PhoneNumber = $1 AND LOWER(Username) <> LOWER($2)", [phoneNumber, req.params.username]);
+      if (taken.rows.length) return res.status(409).json({ error: "That phone number is already used by another account" });
     }
 
     const { rows } = await db.query(

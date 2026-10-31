@@ -44,6 +44,12 @@ const call = async (path, { method = "GET", body, token, raw } = {}) => {
   const badjson = await call("/api/users/login", { method: "POST", raw: "{bad json" });
   note("MED", "malformed JSON body does not crash", badjson.status < 500, `status ${badjson.status}`);
 
+  // ---- one phone number, one account (replies are matched to a player by phone)
+  const dupReg = await call("/api/users/register", { method: "POST", body: { username: `pr_${run}_dup2`, pin: "4821", phoneNumber: "15557770001" } });
+  note("HIGH", "a phone number already on an account cannot be registered again", dupReg.status === 409, `status ${dupReg.status}`);
+  const dupSet = await call(`/api/users/${attacker}/settings`, { method: "PATCH", token: att, body: { phoneNumber: "15557770001", smsOptIn: true } });
+  note("HIGH", "…nor moved onto another account in Settings", dupSet.status === 409, `status ${dupSet.status}`);
+
   // ---- PIN brute force: is there any lockout?
   const t0 = Date.now(); let locked = false, n = 0;
   for (let i = 0; i < 25; i++) { const r = await call("/api/users/login", { method: "POST", body: { username: victim, pin: String(1000 + i) } }); n++; if (r.status === 429) { locked = true; break; } }
@@ -103,7 +109,8 @@ const call = async (path, { method = "GET", body, token, raw } = {}) => {
   // ---- weekly flow edge cases (admin)
   const wk = (p, o = {}) => call(`/api/admin/week${p}`, { token: adm, ...o });
   note("MED", "week with SQL-ish weekStart is handled", (await wk("?weekStart=2026-11-02';DROP TABLE Users;--")).status === 200);
-  note("MED", "set-days with out-of-range days is handled", (await wk("/set-days", { method: "POST", body: { uid: 1, days: [99, -1, 0, 7] } })).status < 500);
+  const uidSet = (await db.query("SELECT UID FROM Users WHERE Username=$1", [victim])).rows[0].uid;
+  note("MED", "set-days with out-of-range days is handled", (await wk("/set-days", { method: "POST", body: { uid: uidSet, days: [99, -1, 0, 7] } })).status < 500);
   const cf = await wk("/confirm", { method: "POST", body: { days: { 2: { uids: [99999999] } } } });
   note("MED", "confirm with a non-existent player id does not 500", cf.status < 500, `status ${cf.status}`);
   const uidV = (await db.query("SELECT UID FROM Users WHERE Username=$1", [victim])).rows[0].uid;
