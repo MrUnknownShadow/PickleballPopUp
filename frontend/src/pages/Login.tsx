@@ -182,9 +182,9 @@ export default function Login() {
             textAlign: 'center',
           }}
         >
-          BARN BOYS
+          BARNBOY
           <br />
-          SCOREBOOK
+          GROUP
         </div>
 
         <div
@@ -216,7 +216,7 @@ export default function Login() {
                 color: 'var(--charcoal)',
               }}
             >
-              BARN BOYS SCOREBOOK
+              BARNBOY GROUP
             </div>
           </div>
 

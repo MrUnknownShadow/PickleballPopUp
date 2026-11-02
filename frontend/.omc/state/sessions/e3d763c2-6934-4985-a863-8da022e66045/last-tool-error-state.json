@@ -1,0 +1,7 @@
+{
+  "tool_name": "mcp__Claude_Browser__computer",
+  "tool_input_preview": "{\"action\":\"scroll\",\"coordinate\":[333,900],\"scroll_direction\":\"down\",\"scroll_amount\":6}",
+  "error": "scroll with `coordinate` requires a prior computer{action:\"screenshot\"} (no screenshot dimensions cached)",
+  "timestamp": "2026-10-28T01:39:15.411Z",
+  "retry_count": 1
+}

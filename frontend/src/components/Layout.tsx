@@ -30,7 +30,7 @@ export default function Layout() {
         background: 'var(--charcoal)', padding: '12px 16px',
         alignItems: 'center', justifyContent: 'space-between',
       }} className="mobile-bar">
-        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'white' }}>PICKLEBALL POP-UP</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'white' }}>BARNBOY GROUP</div>
         <button onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? 'Close menu' : 'Open menu'} aria-expanded={menuOpen} style={{ color: 'white', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, margin: '-10px -10px -10px 0' }}>
           {menuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
@@ -71,7 +71,7 @@ export default function Layout() {
         <div className="court-accent" style={{ padding: '0 20px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div>
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 19, color: 'var(--white)', letterSpacing: 0.5 }}>PICKLEBALL POP-UP</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 19, color: 'var(--white)', letterSpacing: 0.5 }}>BARNBOY GROUP</div>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, marginTop: 2 }}>SCOREBOOK</div>
             </div>
           </div>

@@ -38,7 +38,7 @@ export default function Schedule() {
   return (
     <div className="fade-in" style={{ maxWidth: 640, margin: '0 auto', padding: '16px 16px 40px' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20 }}>PICKLEBALL POP-UP</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20 }}>BARNBOY GROUP</div>
         <a href={username ? '/events' : '/login'} className="btn btn-secondary btn-sm" style={{ minHeight: 44, justifyContent: 'center' }}>{username ? 'Open the app' : 'Sign in'}</a>
       </header>
       <div className="page-title">Schedule</div>
