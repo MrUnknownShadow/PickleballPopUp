@@ -13,7 +13,7 @@ interface AuthContextType {
   username: string | null;
   isAdmin: boolean;
   login: (name: string, pin: string) => Promise<void>;
-  register: (name: string, pin: string, phoneNumber: string, smsOptIn: boolean) => Promise<void>;
+  register: (name: string, pin: string, phoneNumber: string, smsOptIn: boolean, groupCode?: string) => Promise<void>;
   logout: () => void;
   apiFetch: <T = unknown>(
     path: string,
@@ -45,7 +45,8 @@ export function AuthProvider({
       name: string,
       pin: string,
       phoneNumber = '',
-      smsOptIn = false
+      smsOptIn = false,
+      groupCode = ''
     ) => {
       const trimmed = name.trim().toLowerCase();
 
@@ -61,6 +62,7 @@ export function AuthProvider({
             pin,
             phoneNumber,
             smsOptIn,
+            groupCode,
           }),
         }
       );
@@ -98,8 +100,8 @@ export function AuthProvider({
   );
 
   const register = useCallback(
-    async (name: string, pin: string, phoneNumber: string, smsOptIn: boolean) => {
-      await authenticate('register', name, pin, phoneNumber, smsOptIn);
+    async (name: string, pin: string, phoneNumber: string, smsOptIn: boolean, groupCode = '') => {
+      await authenticate('register', name, pin, phoneNumber, smsOptIn, groupCode);
     },
     [authenticate]
   );

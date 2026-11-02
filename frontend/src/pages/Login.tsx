@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useEffect, useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import LabeledInput from '../components/LabeledInput';
@@ -99,7 +99,14 @@ export default function Login() {
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [groupCode, setGroupCode] = useState('');
+  const [codeRequired, setCodeRequired] = useState(false);
   const [smsOptIn, setSmsOptIn] = useState(false); // carriers require an unchecked box the person ticks themselves
+
+  useEffect(() => {
+    const base = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+    fetch(`${base}/api/users/config`).then(r => r.json()).then(c => setCodeRequired(c.signupCodeRequired === true)).catch(() => {});
+  }, []);
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -138,7 +145,7 @@ export default function Login() {
 
     try {
       if (mode === 'register') {
-        await register(name, pin, phoneNumber, smsOptIn);
+        await register(name, pin, phoneNumber, smsOptIn, groupCode);
       } else {
         await login(name, pin);
       }
@@ -288,6 +295,14 @@ export default function Login() {
                   numeric
                   maxLength={4}
                 />
+                {codeRequired && (
+                  <LabeledInput
+                    label="Group code (ask the organizer)"
+                    value={groupCode}
+                    onChange={setGroupCode}
+                    autoComplete="off"
+                  />
+                )}
                 <LabeledInput
                   label="Mobile phone number"
                   type="tel"

@@ -1,6 +1,6 @@
 // Abuse check: throws hostile and sloppy input at the API and reports anything that is not refused cleanly (bad types,
 // oversized text, PIN guessing, acting as someone else, wiping data, bad scores, concurrent joins). Run against a throwaway
-// dry-run server: SMS_DRY_RUN=1 PORT=3002 node server.js, then: node scripts/check-abuse.js http://localhost:3002
+// dry-run server: SMS_DRY_RUN=1 REGISTER_LIMIT_PER_HOUR=1000 PORT=3002 node server.js, then: node scripts/check-abuse.js http://localhost:3002
 // Creates pr_* users and events and deletes only those. Exits 1 if anything is a problem. It never calls DELETE /api/games/reset as an admin.
 require("dotenv").config({ quiet: true });
 const db = require("../src/db");
@@ -23,6 +23,15 @@ const call = async (path, { method = "GET", body, token, raw } = {}) => {
   const att = (await call("/api/users/login", { method: "POST", body: { username: attacker, pin: "4821" } })).data.token;
   const vic = (await call("/api/users/login", { method: "POST", body: { username: victim, pin: "4821" } })).data.token;
   defaultTok = vic;
+
+  // ---- browser hardening headers, and no database error text in responses
+  const home = await fetch(API + "/api/games");
+  const csp = home.headers.get("content-security-policy") || "";
+  note("MED", "security headers are set (CSP frame-ancestors, nosniff, no X-Powered-By)", csp.includes("frame-ancestors 'none'") && home.headers.get("x-content-type-options") === "nosniff" && !home.headers.get("x-powered-by"), `csp ${csp ? "set" : "MISSING"}`);
+  const head = await fetch(API + "/privacy", { method: "HEAD" });
+  note("HIGH", "HEAD /privacy answers 200 (link checkers and carrier reviewers use HEAD)", head.status === 200, `status ${head.status}`);
+  const leak = await call("/api/games/zzz/players");
+  note("MED", "a database error does not leak its text to the browser", !/invalid input|syntax|relation|constraint|column/i.test(JSON.stringify(leak.data)), `status ${leak.status}: ${JSON.stringify(leak.data).slice(0, 80)}`);
 
   // ---- registration fuzz: nothing should 500, junk types should be refused
   const created = [];

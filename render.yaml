@@ -11,7 +11,7 @@ services:
     name: pickleball
     runtime: node
     plan: starter
-    buildCommand: cd frontend && npm ci && VITE_API_URL= npm run build && cd ../backend && npm ci
+    buildCommand: cd frontend && npm ci && VITE_API_URL= npm run build && cd ../backend && npm ci --omit=dev # no developer tools on the live server
     startCommand: cd backend && node server.js
     healthCheckPath: /api/games
     envVars:

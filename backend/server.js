@@ -12,6 +12,19 @@ const fs = require("fs");
 const path = require("path");
 
 const app = express();
+app.disable("x-powered-by");
+// Browser hardening headers. The CSP allows only this site's own scripts, plus Google Fonts for the typefaces.
+app.use((req, res, next) => {
+  res.set({
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "geolocation=(), microphone=(), camera=(), payment=()",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+  });
+  if (req.secure) res.set("Strict-Transport-Security", "max-age=15552000"); // only over HTTPS (needs trust proxy below)
+  next();
+});
 app.set("trust proxy", 1); // behind Render's proxy: req.ip is the real client (needed for login rate limits)
 
 app.use(cors({
@@ -31,7 +44,7 @@ app.use("/api/schedule", week.schedule);
 const dist = path.join(__dirname, "../frontend/dist");
 if (fs.existsSync(dist)) {
   app.use(express.static(dist));
-  app.use((req, res, next) => (req.method === "GET" && !req.path.startsWith("/api") ? res.sendFile(path.join(dist, "index.html")) : next()));
+  app.use((req, res, next) => ((req.method === "GET" || req.method === "HEAD") && !req.path.startsWith("/api") ? res.sendFile(path.join(dist, "index.html")) : next()));
 }
 
 // Run schema on startup to create tables if they don't exist

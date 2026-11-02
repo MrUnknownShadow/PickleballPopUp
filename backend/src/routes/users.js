@@ -31,6 +31,22 @@ function recordFailure(key) {
   if (failures.size > 5000) failures.clear();
 }
 
+// Sign-ups: at most REGISTER_LIMIT_PER_HOUR (default 20) per client address, so a script cannot create accounts in bulk
+// (every opted-in account is texted). If SIGNUP_CODE is set, a new account must also give that group code.
+const signups = new Map();
+function signupBlocked(ip) {
+  const max = Number(process.env.REGISTER_LIMIT_PER_HOUR) || 20, now = Date.now();
+  const f = signups.get(ip);
+  if (!f || now - f.first > 3600e3) { signups.set(ip, { n: 1, first: now }); if (signups.size > 5000) signups.clear(); return false; }
+  f.n++;
+  return f.n > max;
+}
+function codeMatches(given) {
+  const want = process.env.SIGNUP_CODE;
+  if (!want) return true;
+  return typeof given === "string" && given.trim().length === want.length && require("crypto").timingSafeEqual(Buffer.from(given.trim()), Buffer.from(want));
+}
+
 // Only the owner of a profile (or an admin) may read or change it. Needs requireUser first.
 function ownerOrAdmin(req, res, next) {
   if (req.user.isadmin || req.user.username.toLowerCase() === String(req.params.username).toLowerCase()) return next();
@@ -54,6 +70,9 @@ function validPhoneNumber(phoneNumber) {
 /* CREATE ACCOUNT */
 router.post("/register", async (req, res) => {
   try {
+    if (signupBlocked(req.ip)) return res.status(429).json({ error: "Too many sign-ups from this connection. Try again later." });
+    if (!codeMatches(req.body.groupCode)) return res.status(403).json({ error: "Wrong group code. Ask the organizer for it." });
+
     const username = cleanUsername(req.body.username);
     const pin = String(req.body.pin || "");
     const phoneNumber = normalizePhoneNumber(req.body.phoneNumber);
@@ -119,6 +138,9 @@ router.post("/register", async (req, res) => {
   }
 });
 
+/* PUBLIC: does the sign-up form need a group code? (the code itself is never sent) */
+router.get("/config", (_req, res) => res.json({ signupCodeRequired: !!process.env.SIGNUP_CODE }));
+
 /* GET ACCOUNT SETTINGS */
 router.get("/:username", requireUser, ownerOrAdmin, async (req, res) => {
   try {
@@ -135,7 +157,8 @@ router.get("/:username", requireUser, ownerOrAdmin, async (req, res) => {
 
     res.json(rows[0]);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -177,7 +200,8 @@ router.patch("/:username/settings", requireUser, ownerOrAdmin, async (req, res) 
 
     res.json(rows[0]);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -205,7 +229,8 @@ router.delete("/:username", async (req, res) => {
     res.json({ success: true });
   } catch (e) {
     console.error("Delete account error:", e);
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -238,7 +263,8 @@ router.post("/sms/inbound", async (req, res) => {
     await handleInbound(normalizePhoneNumber(req.body.from || req.body.From), String(req.body.body || req.body.Body || ""));
     res.status(204).send();
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -253,7 +279,8 @@ router.post("/sms/telnyx", async (req, res) => {
     }
     res.status(200).send();
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -272,7 +299,8 @@ router.post("/sms/bandwidth", async (req, res) => {
     }
     res.status(200).send();
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 

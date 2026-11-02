@@ -35,7 +35,8 @@ router.get("/", async (req, res) => {
     );
     res.json(rows);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -45,7 +46,8 @@ router.get("/users", async (req, res) => {
     const { rows } = await db.query("SELECT Username FROM Users");
     res.json(rows);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -68,7 +70,8 @@ router.get("/leaderboard", async (req, res) => {
     `);
     res.json(rows);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -116,7 +119,8 @@ router.get("/history", async (req, res) => {
 
     res.json(Object.values(grouped));
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -142,7 +146,8 @@ router.post("/", async (req, res) => {
     );
     res.json({ success: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -157,7 +162,8 @@ router.get("/:id/players", async (req, res) => {
     `, [req.params.id]);
     res.json(rows);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -206,7 +212,8 @@ router.get("/:id/subgames", async (req, res) => {
 
     res.json(Object.values(grouped));
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -252,7 +259,8 @@ router.post("/:id/subgame", async (req, res) => {
 
     res.json({ success: true, sgid });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -274,7 +282,8 @@ router.post("/:id/join", async (req, res) => {
     );
     res.json({ success: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -290,7 +299,8 @@ router.post("/:id/leave", async (req, res) => {
     }
     res.json({ success: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -308,7 +318,8 @@ router.post("/:id/delete", async (req, res) => {
     await db.query("DELETE FROM Games WHERE GID = $1", [gameId]);
     res.json({ success: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -321,7 +332,8 @@ router.post("/:id/start", async (req, res) => {
     );
     res.json({ success: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -356,7 +368,8 @@ router.post("/:id/startgame", async (req, res) => {
 
     res.json({ success: true, sgid });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -382,7 +395,8 @@ router.post("/subgame/:sgid/end", async (req, res) => {
 
     res.json({ success: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -395,7 +409,8 @@ router.post("/:id/end", async (req, res) => {
     );
     res.json({ success: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -414,7 +429,8 @@ router.get("/:id/chat", async (req, res) => {
     `, [gameId]);
     res.json(rows);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -437,7 +453,8 @@ router.post("/:id/chat", async (req, res) => {
     );
     res.json({ success: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -452,7 +469,8 @@ router.delete("/reset", requireAdmin, async (req, res) => {
     await db.query("DELETE FROM Conversations");
     res.json({ message: "Reset complete" });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
