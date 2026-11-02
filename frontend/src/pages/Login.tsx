@@ -128,6 +128,11 @@ export default function Login() {
       return;
     }
 
+    if (mode === 'register' && !/^\d{10,15}$/.test(phoneNumber)) {
+      setError('Enter your mobile phone number (10 digits)');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -284,7 +289,7 @@ export default function Login() {
                   maxLength={4}
                 />
                 <LabeledInput
-                  label="Phone number (optional)"
+                  label="Mobile phone number"
                   type="tel"
                   value={phoneNumber}
                   onChange={setPhoneNumber}

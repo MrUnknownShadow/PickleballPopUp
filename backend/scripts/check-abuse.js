@@ -27,15 +27,16 @@ const call = async (path, { method = "GET", body, token, raw } = {}) => {
   // ---- registration fuzz: nothing should 500, junk types should be refused
   const created = [];
   const weird = { object: { a: 1 }, array: ["x"], number: 12345, nullv: null, empty: "   ", long: "a".repeat(5000), script: "<script>alert(1)</script>", sql: "x'; DROP TABLE Users;--", emoji: "pick😀ball", slash: "../../etc/passwd", nul: "a\u0000b", dup: attacker.toUpperCase() };
+  let ph = 0;
   for (const [k, v] of Object.entries(weird)) {
-    const r = await call("/api/users/register", { method: "POST", body: { username: v, pin: "4821" } });
+    const r = await call("/api/users/register", { method: "POST", body: { username: v, pin: "4821", phoneNumber: `559${run}${ph++}`.slice(0, 11) } });
     const mustRefuse = ["object", "array", "number", "long", "nul", "nullv"].includes(k);
     note(mustRefuse ? "HIGH" : "MED", `register username=${k}`, r.status !== 500 && (!mustRefuse || (r.status >= 400 && r.status < 500)), `status ${r.status}${r.status === 201 ? " (account created: " + JSON.stringify(r.data).slice(0, 60) + ")" : ""}`);
     if (r.status === 201 && r.data?.uid) created.push(r.data.uid);
   }
   for (const uid of created) await db.query("DELETE FROM Users WHERE UID = $1", [uid]);
   for (const pin of ["abcd", "12345", "123", "", null, { a: 1 }, "١٢٣٤"]) {
-    const r = await call("/api/users/register", { method: "POST", body: { username: `pr_${run}_pin`, pin } });
+    const r = await call("/api/users/register", { method: "POST", body: { username: `pr_${run}_pin`, pin, phoneNumber: `5591${run}`.slice(0, 11) } });
     note("MED", `register pin=${JSON.stringify(pin)} is refused`, r.status === 400, `status ${r.status}`);
     if (r.status === 201) await db.query("DELETE FROM Users WHERE Username = $1", [`pr_${run}_pin`]);
   }
@@ -43,6 +44,12 @@ const call = async (path, { method = "GET", body, token, raw } = {}) => {
   note("MED", "login with non-string body does not crash", nonstr.status < 500, `status ${nonstr.status}`);
   const badjson = await call("/api/users/login", { method: "POST", raw: "{bad json" });
   note("MED", "malformed JSON body does not crash", badjson.status < 500, `status ${badjson.status}`);
+
+  // ---- a phone number is required to sign up
+  const noPhone = await call("/api/users/register", { method: "POST", body: { username: `pr_${run}_nophone`, pin: "4821" } });
+  const badPhone = await call("/api/users/register", { method: "POST", body: { username: `pr_${run}_badphone`, pin: "4821", phoneNumber: "12" } });
+  note("HIGH", "sign-up without a phone number (or a nonsense one) is refused", noPhone.status === 400 && badPhone.status === 400, `no phone ${noPhone.status}, bad phone ${badPhone.status}`);
+  if (noPhone.status === 201) await db.query("DELETE FROM Users WHERE Username = $1", [`pr_${run}_nophone`]);
 
   // ---- one phone number, one account (replies are matched to a player by phone)
   const dupReg = await call("/api/users/register", { method: "POST", body: { username: `pr_${run}_dup2`, pin: "4821", phoneNumber: "15557770001" } });

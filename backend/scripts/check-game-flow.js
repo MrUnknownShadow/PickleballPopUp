@@ -4,7 +4,7 @@ const assert = require("assert"); const API = process.argv[2]; const run = Date.
 const call = async (p, { method = "GET", body, token } = {}) => { if (process.env.TRACE) console.log(method, p); const r = await fetch(API + p, { method, headers: { "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }) }, body: body && JSON.stringify(body) }); const t = await r.text(); if (process.env.TRACE && r.status >= 400) console.log("   ->", r.status, t.slice(0, 120)); return { status: r.status, data: t ? JSON.parse(t) : null }; };
 (async () => {
   const names = ["host", "p2", "p3", "p4"].map((n) => `sm_${run}_${n}`); const tok = {};
-  for (const n of names) { assert.equal((await call("/api/users/register", { method: "POST", body: { username: n, pin: "4821" } })).status, 201); tok[n] = (await call("/api/users/login", { method: "POST", body: { username: n, pin: "4821" } })).data.token; assert(tok[n]); }
+  for (const [i, n] of names.entries()) { assert.equal((await call("/api/users/register", { method: "POST", body: { username: n, pin: "4821", phoneNumber: `557${run}${i}` } })).status, 201); tok[n] = (await call("/api/users/login", { method: "POST", body: { username: n, pin: "4821" } })).data.token; assert(tok[n]); }
   const [host, p2, p3, p4] = names;
   assert.equal((await call("/api/games", { method: "POST", token: tok[host], body: { location: `smoke ${run}`, time: new Date(Date.now() + 2 * 3600e3).toISOString() } })).status, 200);
   const g = (await call("/api/games", { token: tok[host] })).data.find((x) => x.location === `smoke ${run}`); assert(g, "event listed");

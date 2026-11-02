@@ -72,9 +72,10 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    if (!validPhoneNumber(phoneNumber)) {
+    // A phone number is required to create an account (texting itself stays optional: it needs the ticked box).
+    if (!phoneNumber || !validPhoneNumber(phoneNumber)) {
       return res.status(400).json({
-        error: "Enter a valid phone number",
+        error: "Enter a valid mobile phone number",
       });
     }
 
