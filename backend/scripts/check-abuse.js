@@ -117,9 +117,10 @@ const call = async (path, { method = "GET", body, token, raw } = {}) => {
   const sim = await wk("/simulate-reply", { method: "POST", body: { uid: uidV, text: "M".repeat(200000) } });
   note("LOW", "simulate-reply with 200 KB text is handled", sim.status < 500, `status ${sim.status}`);
   note("MED", "non-admin cannot read weekly dashboard", (await call("/api/admin/week", { token: att })).status === 403);
+  const prevText = (await wk("/settings")).data.blast_text;
   const xss = await wk("/settings", { method: "PUT", body: { blast_text: "<img src=x onerror=alert(1)> {range}" } });
   note("LOW", "settings text with HTML is stored as plain text", xss.status === 200);
-  await wk("/settings", { method: "PUT", body: { blast_text: "Pickleball: which days can you play {range}? Reply with days like M T W Th F, or None. Reply STOP to opt out." } });
+  await wk("/settings", { method: "PUT", body: { blast_text: prevText } }); // put back exactly what was there
 
   // ---- races: the same player joins twice at once
   const racers = await Promise.all(Array.from({ length: 8 }, () => call(`/api/games/${gid2}/join`, { method: "POST", token: att, body: { username: attacker } })));

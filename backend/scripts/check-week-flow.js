@@ -53,6 +53,7 @@ const cleanup = async () => {
   let r = await call("/api/admin/week/blast", { method: "POST", token, body: { weekStart: WEEK } });
   assert.equal(r.data.alreadySent, false);
   assert((await sms("week_blast")).length >= 7, "blast should text all opted-in players");
+  assert((await sms("week_blast")).every((m) => m.body.startsWith("BARnBoy Group")), "every text names the brand (carrier registration sample messages must match)");
   assert.equal((await call("/api/admin/week/blast", { method: "POST", token, body: { weekStart: WEEK } })).data.alreadySent, true);
 
   const [a, b, c, d, e] = names;

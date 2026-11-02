@@ -9,12 +9,12 @@ const DEFAULTS = {
   default_location: "court 1",
   reminder_hours: "24",      // day-before reminder goes out this long before the game
   ack_replies: "1",          // "1" = text back after a reply ("Got it ...")
-  blast_text: "Pickleball: which days can you play {range}? Reply with days like M T W Th F, or None. Reply STOP to opt out.",
-  confirm_text: "You've been selected for {days}. Full schedule: {link}",
-  removed_text: "Update: you're no longer scheduled for {days}. Schedule: {link}",
-  ack_days_text: "Got it: {days}. Reply again to change.",
-  ack_none_text: "Got it: no days this week. Reply again to change.",
-  unclear_text: "Sorry, didn't catch that. Reply with days like M T W Th F, or None.",
+  blast_text: "BARnBoy Group: which days can you play {range}? Reply with days like M T W Th F, or None. Reply STOP to opt out.",
+  confirm_text: "BARnBoy Group: you've been selected for {days}. Full schedule: {link} Reply STOP to opt out.",
+  removed_text: "BARnBoy Group: update, you're no longer scheduled for {days}. Schedule: {link}",
+  ack_days_text: "BARnBoy Group: got it, {days}. Reply again to change.",
+  ack_none_text: "BARnBoy Group: got it, no days this week. Reply again to change.",
+  unclear_text: "BARnBoy Group: sorry, didn't catch that. Reply with days like M T W Th F, or None.",
 };
 
 async function getSettings() {

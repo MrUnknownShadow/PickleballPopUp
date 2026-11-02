@@ -33,7 +33,7 @@ async function sendDueInvites() {
   );
   for (const r of rows) {
     const text = withNote(
-      `Pickleball: ${when(r.gametime)} at ${r.location}. Can you play? Reply YES to join or NO to skip.`,
+      `BARnBoy Group: ${when(r.gametime)} at ${r.location}. Can you play? Reply YES to join or NO to skip. Reply STOP to opt out.`,
       r.invitenote
     );
     await sendSmsToUser(r, text, { kind: "availability", gid: r.gid });
@@ -75,7 +75,7 @@ async function handleReply(phone, text) {
   await db.query("UPDATE GamePlayers SET Status = $3 WHERE GID = $1 AND UID = $2", [g.gid, user.uid, yes ? "joined" : "declined"]);
   await sendSmsToUser(
     user,
-    yes ? `Thanks! You're signed up for ${when(g.gametime)}. We'll text you if you're picked.` : "No problem, thanks for letting us know.",
+    yes ? `BARnBoy Group: thanks! You're signed up for ${when(g.gametime)}. We'll text you if you're picked.` : "BARnBoy Group: no problem, thanks for letting us know.",
     { kind: "reply", gid: g.gid }
   );
 }
@@ -94,7 +94,7 @@ async function selectPlayers(gid, selectedUids, note) {
     if (r.status === next) continue;
     await db.query("UPDATE GamePlayers SET Status = $3 WHERE GID = $1 AND UID = $2", [gid, r.uid, next]);
     if (next === "selected") {
-      await sendSmsToUser(r, withNote(`You're in! Pickleball ${when(r.gametime)} at ${r.location}.`, note), { kind: next, gid });
+      await sendSmsToUser(r, withNote(`BARnBoy Group: you're in! Pickleball ${when(r.gametime)} at ${r.location}. Reply STOP to opt out.`, note), { kind: next, gid });
       picked++;
     } else dropped++; // not-selected players get no text; the event just disappears for them
   }
@@ -111,7 +111,7 @@ async function sendSchedule(gid, note) {
   );
   if (!rows.length) return 0;
   const text = withNote(
-    `Pickleball schedule: ${when(rows[0].gametime)} at ${rows[0].location}. Playing (${rows.length}): ${rows.map((r) => r.username).join(", ")}.`,
+    `BARnBoy Group schedule: ${when(rows[0].gametime)} at ${rows[0].location}. Playing (${rows.length}): ${rows.map((r) => r.username).join(", ")}.`,
     note
   );
   for (const r of rows) await sendSmsToUser(r, text, { kind: "schedule", gid });
@@ -134,7 +134,7 @@ async function sendDueReminders() {
       [gid]
     );
     for (const r of rows) {
-      await sendSmsToUser(r, `Reminder: you're playing pickleball ${when(r.gametime)} at ${r.location}. Reply STOP to opt out.`, { kind: "reminder", gid });
+      await sendSmsToUser(r, `BARnBoy Group: reminder, you're playing pickleball ${when(r.gametime)} at ${r.location}. Reply STOP to opt out.`, { kind: "reminder", gid });
     }
     await db.query("UPDATE Games SET ReminderSentAt = NOW() WHERE GID = $1", [gid]);
   }

@@ -211,7 +211,14 @@ router.delete("/:username", async (req, res) => {
 // STOP immediately revokes consent; anything else is treated as an availability reply.
 async function handleInbound(from, text) {
   if (!from) return;
-  if (text.trim().toUpperCase() === "STOP") {
+  const word = text.trim().toUpperCase();
+  if (word === "START" || word === "UNSTOP") {
+    // Re-subscribing after STOP: the carrier-side block is lifted by the text provider; this keeps our own flag in step.
+    // (The provider sends the confirmation message itself.)
+    await db.query("UPDATE Users SET SmsOptIn = TRUE, SmsOptedInAt = NOW() WHERE PhoneNumber = $1 AND NOT SmsOptIn", [from]);
+    return;
+  }
+  if (word === "STOP") {
     await db.query(
       `UPDATE Users
        SET SmsOptIn = FALSE, SmsOptedOutAt = NOW()
