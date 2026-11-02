@@ -57,8 +57,8 @@ router.post("/register", async (req, res) => {
     const username = cleanUsername(req.body.username);
     const pin = String(req.body.pin || "");
     const phoneNumber = normalizePhoneNumber(req.body.phoneNumber);
-    // Opt-in by default; texts only go out once a phone number is on file.
-    const smsOptIn = req.body.smsOptIn !== false && !!phoneNumber;
+    // Texts only after the person ticks the box themselves (carrier rule), and only once a phone number is on file.
+    const smsOptIn = req.body.smsOptIn === true && !!phoneNumber;
 
     if (!username) {
       return res.status(400).json({

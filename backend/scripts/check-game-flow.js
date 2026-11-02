@@ -22,6 +22,11 @@ const call = async (p, { method = "GET", body, token } = {}) => { if (process.en
   assert((await call("/api/games/leaderboard")).data.some((r) => r.username === host || r.Username === host), "leaderboard shows the player");
   // own settings work, wrong PIN lockout
   assert.equal((await call(`/api/users/${host}/settings`, { method: "PATCH", token: tok[host], body: { phoneNumber: "15550001111", smsOptIn: true } })).status, 200);
+  // sign-up without ticking the text option must not opt the person in (carrier consent rule)
+  const noTick = `sm_${run}_notick`;
+  assert.equal((await call("/api/users/register", { method: "POST", body: { username: noTick, pin: "4821", phoneNumber: "15558880001" } })).status, 201);
+  const prof = (await call(`/api/users/${noTick}`, { token: (await call("/api/users/login", { method: "POST", body: { username: noTick, pin: "4821" } })).data.token })).data;
+  assert.equal(prof.smsoptin, false, "no tick, no texts");
   console.log("OK: register, login, create event, join, start session, play + score a game, chat, host-only delete refused, end session, leaderboard, own settings");
   process.exit(0);
 })().catch((e) => { console.error("SMOKE FAIL:", e.message); process.exit(1); });

@@ -103,7 +103,7 @@ export default function Settings() {
           <input className="settings-input" type="tel" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 15))} placeholder="Optional phone number" />
           <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 18, fontSize: 14, color: 'var(--charcoal)', cursor: 'pointer' }}>
             <input type="checkbox" checked={smsOptIn} onChange={e => setSmsOptIn(e.target.checked)} style={{ marginTop: 4, accentColor: 'var(--green)' }} />
-            <span><strong>Enable Text Notifications</strong><br /><span style={{ color: 'var(--gray-500)', fontSize: 13 }}>You can unsubscribe at any time by turning this off or replying STOP.</span></span>
+            <span><strong>Enable Text Notifications</strong><br /><span style={{ color: 'var(--gray-500)', fontSize: 13 }}>Scheduling texts only, about 1 to 3 a week. Message and data rates may apply. Turn this off or reply STOP at any time.</span></span>
           </label>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
             <button type="submit" className="btn btn-primary" disabled={saving}><Check size={15} />{saving ? 'Saving...' : 'Save settings'}</button>

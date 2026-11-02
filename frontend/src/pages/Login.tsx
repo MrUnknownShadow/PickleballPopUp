@@ -98,7 +98,7 @@ export default function Login() {
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [smsOptIn, setSmsOptIn] = useState(true);
+  const [smsOptIn, setSmsOptIn] = useState(false); // carriers require an unchecked box the person ticks themselves
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -164,7 +164,7 @@ export default function Login() {
     setPin('');
     setConfirmPin('');
     setPhoneNumber('');
-    setSmsOptIn(true);
+    setSmsOptIn(false);
   };
 
   return (
@@ -293,7 +293,7 @@ export default function Login() {
                 />
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 22, fontSize: 13, color: 'var(--gray-700)' }}>
                   <input type="checkbox" checked={smsOptIn} onChange={e => setSmsOptIn(e.target.checked)} style={{ marginTop: 4, accentColor: 'var(--green)' }} />
-                  <span>Text me about my pickleball events (uncheck to opt out; reply STOP any time).</span>
+                  <span>Text me about my pickleball events (about 1 to 3 messages a week). Message and data rates may apply. Reply STOP to opt out. See the <a href="/privacy" target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>Privacy Policy</a> and <a href="/terms" target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>Terms</a>.</span>
                 </label>
               </>
             )}
@@ -367,6 +367,10 @@ export default function Login() {
             </div>
 
           </form>
+
+          <div style={{ marginTop: 20, fontSize: 12, color: 'var(--gray-500)', textAlign: 'center' }}>
+            <a href="/privacy" style={{ textDecoration: 'underline' }}>Privacy</a> · <a href="/terms" style={{ textDecoration: 'underline' }}>Terms</a>
+          </div>
         </div>
       </div>
     </div>

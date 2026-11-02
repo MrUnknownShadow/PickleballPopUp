@@ -134,7 +134,7 @@ async function sendDueReminders() {
       [gid]
     );
     for (const r of rows) {
-      await sendSmsToUser(r, `Reminder: you're playing pickleball ${when(r.gametime)} at ${r.location}.`, { kind: "reminder", gid });
+      await sendSmsToUser(r, `Reminder: you're playing pickleball ${when(r.gametime)} at ${r.location}. Reply STOP to opt out.`, { kind: "reminder", gid });
     }
     await db.query("UPDATE Games SET ReminderSentAt = NOW() WHERE GID = $1", [gid]);
   }
