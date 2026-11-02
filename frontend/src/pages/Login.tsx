@@ -91,8 +91,9 @@ function CourtIllustration() {
 }
 
 export default function Login() {
+  // /login?signup=1 opens the sign-up form directly (the link given to the text-message carriers as opt-in proof).
   const [mode, setMode] =
-    useState<'login' | 'register'>('login');
+    useState<'login' | 'register'>(new URLSearchParams(window.location.search).has('signup') ? 'register' : 'login');
 
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
