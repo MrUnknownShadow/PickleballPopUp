@@ -38,7 +38,8 @@ function PodiumSpot({ player, rank, isMe }: { player: RichEntry; rank: number; i
         boxShadow: isMe ? '0 0 0 2px var(--green)' : 'none',
       }}>{player.displayName[0]?.toUpperCase()}</div>
       <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.displayName}</div>
-      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15, color: 'var(--green-dark)', marginTop: 2, marginBottom: 6 }}>{player.winPct}%</div>
+      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15, color: 'var(--green-dark)', marginTop: 2 }}>{player.winPct}%</div>
+      <div style={{ fontSize: 11, color: 'var(--gray-500)', marginBottom: 6, whiteSpace: 'nowrap' }}>{player.totalW}W {player.losses}L · {player.totalG}G</div>
       <div style={{
         height: PODIUM_HEIGHT[rank], background: PODIUM_COLOR[rank], borderRadius: '6px 6px 0 0',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 8,

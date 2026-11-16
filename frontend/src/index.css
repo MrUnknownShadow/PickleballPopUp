@@ -248,3 +248,45 @@ input, select, textarea { font-family: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* Scorekeeping report: the layout of the sponsor's monthly PDF */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.main-content { min-width: 0; } /* a wide table scrolls inside its box instead of widening the page */
+.report-page { background: #fff; color: #111; border: 1.5px solid var(--line); border-radius: var(--radius-lg); padding: 28px 24px 32px; font-family: Arial, Helvetica, sans-serif; }
+.report-title { text-align: center; font-size: 22px; font-weight: 700; margin: 0; }
+.report-subtitle { text-align: center; font-size: 13px; color: #444; margin: 6px 0 18px; text-transform: capitalize; }
+.report-heading { font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 700; margin: 26px 0 10px; }
+.report-block { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.report-scroll { max-width: 100%; overflow-x: auto; margin: 0 auto; width: fit-content; }
+.report-table { border-collapse: collapse; font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; }
+.report-table th, .report-table td { border: 1px solid #9aa3ad; padding: 5px 10px; white-space: nowrap; }
+.report-table thead th { background: #2e4057; color: #fff; font-weight: 700; }
+.report-table tbody tr:nth-child(even) { background: #eef2f6; }
+.report-table tbody th { font-weight: 400; text-align: left; min-width: 70px; }
+.report-games { min-width: 600px; }
+.report-games td:nth-child(2), .report-games td:nth-child(5) { width: 34%; }
+.report-games td:first-child { text-align: left; width: 22px; }
+.report-table tbody tr.row-close, .swatch.row-close { background: #cce5fa; }
+.report-table tbody tr.row-blowout, .swatch.row-blowout { background: #fff8c9; }
+.report-table tbody tr.row-shutout, .swatch.row-shutout { background: #ffcccc; }
+.report-table tbody tr.row-me th { font-weight: 700; }
+.report-stats td, .report-stats th { padding: 6px 9px; }
+.report-legend { border-collapse: collapse; font-size: 10px; min-width: 176px; }
+.report-legend td { border: 1px solid #9aa3ad; padding: 3px 4px; }
+.report-legend .swatch { width: 18px; }
+.report-edit { font-size: 11px; color: var(--green); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 2px 4px; }
+.results-range { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-bottom: 20px; }
+.results-range label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: var(--gray-700); }
+.results-range .settings-input { width: auto; padding: 6px 8px; }
+@media (max-width: 768px) {
+  .report-page { padding: 20px 12px 24px; border-radius: var(--radius-md); }
+  .report-games { min-width: 0; }
+  .report-table th, .report-table td { padding: 5px 6px; }
+}
+@media print {
+  .no-print, .desktop-sidebar, .mobile-bar, .mobile-menu, .notification { display: none !important; }
+  .main-content { margin: 0 !important; padding: 0 !important; }
+  .report-page { border: none; padding: 0; }
+  .report-scroll { overflow: visible; }
+  .report-table, .report-legend { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

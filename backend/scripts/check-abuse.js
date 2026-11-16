@@ -106,9 +106,15 @@ const call = async (path, { method = "GET", body, token, raw } = {}) => {
   await call(`/api/games/${gid2}/start`, { method: "POST", body: { username: victim } });
   const sg = await call(`/api/games/${gid2}/startgame`, { method: "POST", body: { team1: [victim], team2: [attacker], durationMinutes: 15 } });
   const sgid = sg.data?.sgid ?? sg.data?.sgId ?? sg.data?.SGID;
-  if (sgid) for (const [a, b, label] of [[5, 5, "tie"], [-3, 9, "negative"], [999999, 0, "huge"], ["x", 9, "text"]]) {
-    const r = await call(`/api/games/subgame/${sgid}/end`, { method: "POST", body: { team1score: a, team2score: b } });
-    note("MED", `score ${label} (${a}-${b}) is refused`, r.status === 400, `status ${r.status}`);
+  if (sgid) {
+    const asPlayer = await call(`/api/games/subgame/${sgid}/end`, { method: "POST", body: { team1score: 9, team2score: 0 } });
+    note("HIGH", "only an admin can record a score", asPlayer.status === 403, `status ${asPlayer.status}`);
+    const fix = await call(`/api/games/subgame/${sgid}/score`, { method: "PUT", token: att, body: { team1score: 0, team2score: 9 } });
+    note("HIGH", "only an admin can correct a score", fix.status === 403, `status ${fix.status}`);
+    for (const [a, b, label] of [[5, 5, "tie"], [-3, 9, "negative"], [999999, 0, "huge"], ["x", 9, "text"]]) {
+      const r = await call(`/api/games/subgame/${sgid}/end`, { method: "POST", token: adm, body: { team1score: a, team2score: b } });
+      note("MED", `score ${label} (${a}-${b}) is refused`, r.status === 400, `status ${r.status}`);
+    }
   } else note("LOW", "could not start a game for score tests", true, JSON.stringify(sg.data).slice(0, 100));
 
   // ---- the wipe-everything route (NOT called: it would delete the data)

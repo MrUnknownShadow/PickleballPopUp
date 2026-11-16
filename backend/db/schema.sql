@@ -131,3 +131,6 @@ CREATE TABLE IF NOT EXISTS Availability (
 -- A confirmed day becomes a normal event, so reminders, the calendar and scorekeeping all work on it.
 ALTER TABLE Games ADD COLUMN IF NOT EXISTS PollWeek DATE;
 ALTER TABLE Games ADD COLUMN IF NOT EXISTS PollDay SMALLINT;
+
+-- Position of a player within their team (0, 1), so results read "Wells & Garrett" in the order they were entered.
+ALTER TABLE SubGamePlayers ADD COLUMN IF NOT EXISTS Seat SMALLINT;

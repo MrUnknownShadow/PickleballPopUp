@@ -8,12 +8,13 @@ interface ScoreEntryModalProps {
   onClose: () => void;
   onEnded: () => void;
   apiFetch: <T = unknown>(path: string, options?: RequestInit) => Promise<T>;
+  correcting?: boolean; // fix the score of a finished game instead of finishing a live one
 }
 
-export default function ScoreEntryModal({ subGame, onClose, onEnded, apiFetch }: ScoreEntryModalProps) {
+export default function ScoreEntryModal({ subGame, onClose, onEnded, apiFetch, correcting = false }: ScoreEntryModalProps) {
   useEscape(onClose);
-  const [team1score, setTeam1score] = useState('');
-  const [team2score, setTeam2score] = useState('');
+  const [team1score, setTeam1score] = useState(correcting ? String(subGame.team1score) : '');
+  const [team2score, setTeam2score] = useState(correcting ? String(subGame.team2score) : '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -23,8 +24,8 @@ export default function ScoreEntryModal({ subGame, onClose, onEnded, apiFetch }:
     setLoading(true);
     setError('');
     try {
-      await apiFetch(`/api/games/subgame/${subGame.sgid}/end`, {
-        method: 'POST',
+      await apiFetch(`/api/games/subgame/${subGame.sgid}/${correcting ? 'score' : 'end'}`, {
+        method: correcting ? 'PUT' : 'POST',
         body: JSON.stringify({ team1score: parseInt(team1score), team2score: parseInt(team2score) }),
       });
       onEnded();
@@ -39,7 +40,7 @@ export default function ScoreEntryModal({ subGame, onClose, onEnded, apiFetch }:
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="score-title" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-title" id="score-title">Enter Final Score</div>
+        <div className="modal-title" id="score-title">{correcting ? 'Correct Score' : 'Enter Final Score'}</div>
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
             <div>

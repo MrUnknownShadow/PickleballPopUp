@@ -8,7 +8,7 @@ const baseNavItems = [
   { to: '/schedule', label: 'Schedule', icon: CalendarCheck },
   { to: '/calendar', label: 'Calendar', icon: CalendarDays },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { to: '/history', label: 'Game History', icon: ClipboardList },
+  { to: '/history', label: 'Results', icon: ClipboardList },
   { to: '/settings', label: 'Settings', icon: SettingsIcon },
 ];
 

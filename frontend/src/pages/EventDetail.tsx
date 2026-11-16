@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../hooks/useApi';
 import type { Game, Player, ChatMessage, SubGame } from '../types';
@@ -37,7 +37,7 @@ function formatDuration(start?: string, end?: string): string {
 
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
-  const { username, apiFetch } = useAuth();
+  const { username, isAdmin, apiFetch } = useAuth();
   const navigate = useNavigate();
   const { show, Notification } = useNotification();
 
@@ -146,7 +146,7 @@ export default function EventDetail() {
   if (activeSubGame) {
     return (
       <>
-        <LiveGameTimer subGame={activeSubGame} onEndGame={() => setScoringSubGame(activeSubGame)} isAdmin={isCreator} />
+        <LiveGameTimer subGame={activeSubGame} onEndGame={isAdmin ? () => setScoringSubGame(activeSubGame) : undefined} isAdmin={isCreator} />
         {scoringSubGame && (
           <ScoreEntryModal
             subGame={scoringSubGame}
@@ -303,9 +303,12 @@ export default function EventDetail() {
               <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22 }}>
                 Games ({completedSubGames.length})
               </div>
-              {isInProgress && isCreator && (
-                <button className="btn btn-primary btn-sm" onClick={() => setShowTeamPicker(true)}>+ New Game</button>
-              )}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Link to={`/history/${id}`} className="btn btn-secondary btn-sm">Results table</Link>
+                {isInProgress && isCreator && (
+                  <button className="btn btn-primary btn-sm" onClick={() => setShowTeamPicker(true)}>+ New Game</button>
+                )}
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

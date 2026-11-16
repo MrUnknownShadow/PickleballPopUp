@@ -14,7 +14,7 @@ function formatElapsed(ms: number): string {
 
 interface LiveGameTimerProps {
   subGame: SubGame;
-  onEndGame: () => void;
+  onEndGame?: () => void; // only site admins record scores; without it players see a waiting note
   isAdmin?: boolean;
 }
 
@@ -103,9 +103,13 @@ export default function LiveGameTimer({ subGame, onEndGame, isAdmin }: LiveGameT
         </button>
       )}
 
-      <button onClick={onEndGame} className="btn btn-primary btn-lg">
-        End Game
-      </button>
+      {onEndGame ? (
+        <button onClick={onEndGame} className="btn btn-primary btn-lg">
+          End Game
+        </button>
+      ) : (
+        <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 15 }}>An admin will record the final score.</div>
+      )}
     </div>
   );
 }

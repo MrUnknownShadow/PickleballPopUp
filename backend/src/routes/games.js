@@ -2,6 +2,8 @@ const express = require("express");
 const db = require("../db");
 
 const { requireUser, requireAdmin } = require("../auth");
+const { playerStats, classify } = require("../stats");
+const { parts, venueTz } = require("../tz");
 
 const router = express.Router();
 
@@ -69,6 +71,66 @@ router.get("/leaderboard", async (req, res) => {
       ORDER BY wins DESC
     `);
     res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Finished games in play order (event time, then the order games were started), grouped with their teams.
+async function finishedGames(where, params) {
+  const { rows } = await db.query(`
+    SELECT sg.SGID AS sgid, sg.GID AS gid, sg.Team1Score AS s1, sg.Team2Score AS s2, sgp.Team AS team, u.Username AS username
+    FROM SubGames sg
+    JOIN Games g ON g.GID = sg.GID
+    JOIN SubGamePlayers sgp ON sgp.SGID = sg.SGID
+    JOIN Users u ON u.UID = sgp.UID
+    WHERE sg.Status = 'completed' AND ${where}
+    ORDER BY g.GameTime, g.GID, sg.CreatedAt, sg.SGID, sgp.Seat NULLS LAST, u.Username
+  `, params);
+  const games = new Map();
+  for (const r of rows) {
+    if (!games.has(r.sgid)) games.set(r.sgid, { sgid: r.sgid, gid: r.gid, s1: r.s1, s2: r.s2, team1: [], team2: [] });
+    games.get(r.sgid)[r.team === 1 ? "team1" : "team2"].push(r.username);
+  }
+  return [...games.values()];
+}
+
+/* RESULTS: sessions and combined player stats for a date range (venue dates, default this month) */
+router.get("/results", async (req, res) => {
+  try {
+    const isDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || "") && !Number.isNaN(Date.parse(d));
+    const today = parts();
+    const from = isDate(req.query.from) ? req.query.from : `${today.ymd.slice(0, 8)}01`;
+    const to = isDate(req.query.to) ? req.query.to : today.ymd;
+    if (from > to) return res.status(400).json({ error: "The start date must be before the end date" });
+
+    const day = "(g.GameTime AT TIME ZONE 'UTC' AT TIME ZONE $1)::date";
+    const games = await finishedGames(`${day} BETWEEN $2 AND $3`, [venueTz(), from, to]);
+    const { rows: sessions } = await db.query(`
+      SELECT g.GID AS gid, g.Location AS location, g.GameTime AS gametime, COUNT(*)::int AS games
+      FROM Games g JOIN SubGames sg ON sg.GID = g.GID
+      WHERE sg.Status = 'completed' AND ${day} BETWEEN $2 AND $3
+      GROUP BY g.GID ORDER BY g.GameTime, g.GID
+    `, [venueTz(), from, to]);
+    res.json({ from, to, sessions, stats: playerStats(games) });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+/* SESSION REPORT: numbered game results with their close/blowout/shutout class, and the session's player stats */
+router.get("/:id/report", async (req, res) => {
+  try {
+    const { rows } = await db.query("SELECT GID AS gid, Location AS location, GameTime AS gametime, Status AS status FROM Games WHERE GID = $1", [req.params.id]);
+    if (!rows[0]) return res.status(404).json({ error: "Event not found" });
+    const games = await finishedGames("g.GID = $1", [req.params.id]);
+    res.json({
+      ...rows[0],
+      games: games.map((g, i) => ({ n: i + 1, ...g, kind: classify(g.s1, g.s2) })),
+      stats: playerStats(games),
+    });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Server error" });
@@ -218,7 +280,7 @@ router.get("/:id/subgames", async (req, res) => {
 });
 
 /* RECORD SUB-GAME */
-router.post("/:id/subgame", async (req, res) => {
+router.post("/:id/subgame", requireAdmin, async (req, res) => {
   try {
     const { team1, team2, team1score, team2score } = req.body;
     const gameId = req.params.id;
@@ -236,23 +298,23 @@ router.post("/:id/subgame", async (req, res) => {
     const team1wins = parseInt(team1score) > parseInt(team2score);
 
     // Record team 1 players
-    for (const name of team1) {
+    for (const [seat, name] of team1.entries()) {
       const { rows } = await db.query("SELECT * FROM Users WHERE Username = $1", [name.toLowerCase()]);
       if (rows.length > 0) {
         await db.query(
-          "INSERT INTO SubGamePlayers (SGID, UID, Team, IsWinner) VALUES ($1, $2, $3, $4)",
-          [sgid, rows[0].uid, 1, team1wins]
+          "INSERT INTO SubGamePlayers (SGID, UID, Team, IsWinner, Seat) VALUES ($1, $2, $3, $4, $5)",
+          [sgid, rows[0].uid, 1, team1wins, seat]
         );
       }
     }
 
     // Record team 2 players
-    for (const name of team2) {
+    for (const [seat, name] of team2.entries()) {
       const { rows } = await db.query("SELECT * FROM Users WHERE Username = $1", [name.toLowerCase()]);
       if (rows.length > 0) {
         await db.query(
-          "INSERT INTO SubGamePlayers (SGID, UID, Team, IsWinner) VALUES ($1, $2, $3, $4)",
-          [sgid, rows[0].uid, 2, !team1wins]
+          "INSERT INTO SubGamePlayers (SGID, UID, Team, IsWinner, Seat) VALUES ($1, $2, $3, $4, $5)",
+          [sgid, rows[0].uid, 2, !team1wins, seat]
         );
       }
     }
@@ -353,16 +415,16 @@ router.post("/:id/startgame", async (req, res) => {
     );
     const sgid = sgRows[0].sgid;
 
-    for (const name of team1) {
+    for (const [seat, name] of team1.entries()) {
       const { rows } = await db.query("SELECT * FROM Users WHERE Username = $1", [name.toLowerCase()]);
       if (rows.length > 0) {
-        await db.query("INSERT INTO SubGamePlayers (SGID, UID, Team) VALUES ($1, $2, 1)", [sgid, rows[0].uid]);
+        await db.query("INSERT INTO SubGamePlayers (SGID, UID, Team, Seat) VALUES ($1, $2, 1, $3)", [sgid, rows[0].uid, seat]);
       }
     }
-    for (const name of team2) {
+    for (const [seat, name] of team2.entries()) {
       const { rows } = await db.query("SELECT * FROM Users WHERE Username = $1", [name.toLowerCase()]);
       if (rows.length > 0) {
-        await db.query("INSERT INTO SubGamePlayers (SGID, UID, Team) VALUES ($1, $2, 2)", [sgid, rows[0].uid]);
+        await db.query("INSERT INTO SubGamePlayers (SGID, UID, Team, Seat) VALUES ($1, $2, 2, $3)", [sgid, rows[0].uid, seat]);
       }
     }
 
@@ -374,7 +436,7 @@ router.post("/:id/startgame", async (req, res) => {
 });
 
 /* END SUB-GAME (enter score, mark winners) */
-router.post("/subgame/:sgid/end", async (req, res) => {
+router.post("/subgame/:sgid/end", requireAdmin, async (req, res) => {
   try {
     const { team1score, team2score } = req.body;
     const sgid = req.params.sgid;
@@ -393,6 +455,29 @@ router.post("/subgame/:sgid/end", async (req, res) => {
     await db.query("UPDATE SubGamePlayers SET IsWinner = $1 WHERE SGID = $2 AND Team = 1", [team1wins, sgid]);
     await db.query("UPDATE SubGamePlayers SET IsWinner = $1 WHERE SGID = $2 AND Team = 2", [!team1wins, sgid]);
 
+    res.json({ success: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+/* CORRECT A FINISHED GAME'S SCORE (admins). Score and winners change in one statement; stats are computed from scores. */
+router.put("/subgame/:sgid/score", requireAdmin, async (req, res) => {
+  try {
+    const { team1score, team2score } = req.body;
+    const bad = scoreError(team1score, team2score);
+    if (bad) return res.status(400).json({ error: bad });
+
+    const { rows } = await db.query(`
+      WITH sg AS (
+        UPDATE SubGames SET Team1Score = $1, Team2Score = $2 WHERE SGID = $3 AND Status = 'completed' RETURNING SGID
+      ), winners AS (
+        UPDATE SubGamePlayers SET IsWinner = ((Team = 1) = $4) WHERE SGID IN (SELECT SGID FROM sg)
+      )
+      SELECT SGID FROM sg
+    `, [Number(team1score), Number(team2score), req.params.sgid, Number(team1score) > Number(team2score)]);
+    if (!rows.length) return res.status(404).json({ error: "No finished game with that number" });
     res.json({ success: true });
   } catch (e) {
     console.error(e);

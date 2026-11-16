@@ -73,3 +73,49 @@ export interface UserProfile {
   smsoptin: boolean;
   createdat: string;
 }
+// Scorekeeping report (format of the sponsor's monthly PDF)
+export type GameKind = 'close' | 'blowout' | 'shutout' | null;
+
+export interface ReportGame {
+  n: number;
+  sgid: number;
+  team1: string[];
+  team2: string[];
+  s1: number;
+  s2: number;
+  kind: GameKind;
+}
+
+export interface PlayerStatRow {
+  player: string;
+  w: number;
+  l: number;
+  winPct: number;
+  pf: number;
+  pa: number;
+  avgF: number;
+  avgA: number;
+  diff: number;
+  srvPct: number;
+  rcvPct: number;
+  streak: string;
+  avgMgn: number;
+  closeW: number;
+  closeL: number;
+}
+
+export interface SessionReport {
+  gid: number;
+  location: string;
+  gametime: string;
+  status: 'scheduled' | 'in_progress' | 'completed';
+  games: ReportGame[];
+  stats: PlayerStatRow[];
+}
+
+export interface ResultsSummary {
+  from: string;
+  to: string;
+  sessions: { gid: number; location: string; gametime: string; games: number }[];
+  stats: PlayerStatRow[];
+}

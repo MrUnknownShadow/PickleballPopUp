@@ -4,7 +4,8 @@ import Login from './pages/Login';
 import Events from './pages/Events';
 import EventDetail from './pages/EventDetail';
 import Leaderboard from './pages/Leaderboard';
-import GameHistory from './pages/GameHistory';
+import Results from './pages/Results';
+import SessionReport from './pages/SessionReport';
 import Calendar from './pages/Calendar';
 import Settings from './pages/Settings';
 import Admin from './pages/Admin';
@@ -33,7 +34,8 @@ function AppRoutes() {
         <Route path="events/:id" element={<EventDetail />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="leaderboard" element={<Leaderboard />} />
-        <Route path="history" element={<GameHistory />} />
+        <Route path="history" element={<Results />} />
+        <Route path="history/:id" element={<SessionReport />} />
         <Route path="settings" element={<Settings />} />
         <Route path="admin" element={<Admin />} />
       </Route>
