@@ -33,7 +33,8 @@ export default function LiveGameTimer({ subGame, eventId, apiFetch, onEndGame, i
       try {
         const { count } = await apiFetch<{ count: number }>(`/api/games/${eventId}/scream`);
         if (stop) return;
-        if (seen.current !== null && count !== seen.current) void playScream();
+        // Only a rise counts: after a server restart the count drops to 0, which just resets the baseline.
+        if (seen.current !== null && count > seen.current) void playScream();
         seen.current = count;
       } catch { /* offline for a moment: try again next tick */ }
     };

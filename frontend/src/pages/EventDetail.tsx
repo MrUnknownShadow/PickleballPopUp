@@ -75,16 +75,22 @@ export default function EventDetail() {
 
   useEffect(() => { load(); }, [id]);
 
-  // During a session, quietly re-check the games so a court-side screen follows what the admin does on a phone:
-  // it switches to the timer when a game starts and back when the score is saved. Only the games list is replaced,
-  // and only when it changed, so nothing flashes and an open score form is never reset.
+  // Until the event is over, quietly re-check it so a court-side screen follows what the admin does on a phone:
+  // the session starting, a game starting (switch to the timer) and the score being saved (switch back).
+  // State is replaced only when it changed, so nothing flashes and an open score form is never reset.
   const liveStatus = event?.status ?? event?.Status;
   useEffect(() => {
-    if (liveStatus !== 'in_progress') return;
+    if (!liveStatus || liveStatus === 'completed') return;
+    const same = <T,>(prev: T, next: T) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next);
     const t = setInterval(async () => {
       try {
-        const fresh = await apiFetch<SubGame[]>(`/api/games/${id}/subgames`);
-        setSubGames(prev => (JSON.stringify(prev) === JSON.stringify(fresh) ? prev : fresh));
+        const [events, fresh] = await Promise.all([
+          apiFetch<Game[]>(`/api/games?username=${username}`),
+          apiFetch<SubGame[]>(`/api/games/${id}/subgames`),
+        ]);
+        const ev = events.find(g => String(g.gid ?? g.GID) === String(id));
+        if (ev) setEvent(prev => same(prev, ev));
+        setSubGames(prev => same(prev, fresh));
       } catch { /* offline for a moment: next tick */ }
     }, 4000);
     return () => clearInterval(t);
