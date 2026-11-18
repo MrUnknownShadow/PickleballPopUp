@@ -4,6 +4,7 @@ import { useNotification } from '../hooks/useApi';
 
 interface Person { uid: number; username: string; confirmed?: boolean; late?: boolean }
 interface Week {
+  roster: { uid: number; username: string; smsoptin: boolean }[];
   weekStart: string; range: string; poll: { sentat: string; cutoffat: string } | null;
   settings: Record<string, string>;
   days: Record<string, Person[]>; games: Record<string, { gid: number; time: string; location: string } | null>;
@@ -42,13 +43,14 @@ export default function AdminWeek() {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [fix, setFix] = useState<Record<number, Set<number>>>({});
   const [simUid, setSimUid] = useState(0);
+  const [added, setAdded] = useState<Record<number, Person[]>>({}); // players picked by hand for a day (a substitute)
   const [simText, setSimText] = useState('M W F');
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async (ws?: string | null) => {
     try {
       const w = await apiFetch<Week>(`/api/admin/week${ws ? `?weekStart=${ws}` : ''}`);
-      setWeek(w); setWeekStart(w.weekStart); setSettings(w.settings);
+      setWeek(w); setWeekStart(w.weekStart); setSettings(w.settings); setAdded({});
       const p: Record<string, Set<number>> = {}, t: Record<string, string> = {}, l: Record<string, string> = {};
       for (let d = 1; d <= 5; d++) {
         p[d] = new Set((w.days[d] ?? []).filter(x => x.confirmed).map(x => x.uid));
@@ -105,7 +107,7 @@ export default function AdminWeek() {
         <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>2. Pick who plays each day</h2>
         <p style={{ fontSize: 13, color: 'var(--gray-500)', marginBottom: 4 }}>Tick the players you want. A player can be available on several days. Ticked players get one text listing their days; everyone else gets nothing.</p>
         {[1, 2, 3, 4, 5].map(d => {
-          const people = week.days[d] ?? [];
+          const people = [...(week.days[d] ?? []), ...(added[d] ?? [])];
           return (
             <div key={d} style={{ borderTop: '1px solid var(--line)', marginTop: 14, paddingTop: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -120,6 +122,19 @@ export default function AdminWeek() {
                   {p.late && <span className="badge badge-yellow">late</span>}
                 </label>
               ))}
+              <div style={{ marginTop: 6 }}>
+                <label htmlFor={`add${d}`} style={label}>Add another player (a substitute)</label>
+                <select id={`add${d}`} className="settings-input" value="" style={{ minHeight: 44 }}
+                  onChange={e => {
+                    const who = week.roster.find(r => r.uid === Number(e.target.value));
+                    if (!who) return;
+                    setAdded(a => ({ ...a, [d]: [...(a[d] ?? []), { uid: who.uid, username: who.username }] }));
+                    toggle(d, who.uid);
+                  }}>
+                  <option value="">Choose a player…</option>
+                  {week.roster.filter(r => !people.some(p => p.uid === r.uid)).map(r => <option key={r.uid} value={r.uid}>{r.username}{r.smsoptin ? '' : ' (texts off)'}</option>)}
+                </select>
+              </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
                 <div style={{ flex: '1 1 110px' }}><label htmlFor={`t${d}`} style={label}>Time</label><input id={`t${d}`} className="settings-input" type="time" value={times[d] ?? ''} onChange={e => setTimes({ ...times, [d]: e.target.value })} /></div>
                 <div style={{ flex: '2 1 160px' }}><label htmlFor={`l${d}`} style={label}>Location</label><input id={`l${d}`} className="settings-input" value={places[d] ?? ''} onChange={e => setPlaces({ ...places, [d]: e.target.value })} /></div>

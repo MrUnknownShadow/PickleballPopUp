@@ -5,15 +5,9 @@ const db = require("../db");
 const { createSession, requireUser, requireAdmin } = require("../auth");
 const { validTwilioSignature, validBandwidthAuth, validTelnyxSignature } = require("../sms");
 const { handleReply } = require("../notify");
+const { cleanUsername, validPin, normalizePhoneNumber, validPhoneNumber, AccountError, createAccount, removeAccount } = require("../accounts");
 
 const router = express.Router();
-
-// Usernames are text only: 1-30 characters, no control characters (a stray NUL or a 5000-character name used to crash the server).
-function cleanUsername(v) {
-  if (typeof v !== "string") return null;
-  const name = v.trim();
-  return name.length >= 1 && name.length <= 30 && !/[\u0000-\u001f\u007f]/.test(name) ? name : null;
-}
 
 // Wrong-PIN guesses: 8 per 15 minutes per client and name (and 40 per name overall), then 429. In memory, so one server only.
 const WINDOW_MS = 15 * 60e3;
@@ -53,88 +47,19 @@ function ownerOrAdmin(req, res, next) {
   res.status(403).json({ error: "That is not your account" });
 }
 
-function validPin(pin) {
-  return /^\d{4}$/.test(String(pin || ""));
-}
-
-function normalizePhoneNumber(phoneNumber) {
-  const digits = String(phoneNumber || "").replace(/\D/g, "");
-  if (!digits) return null;
-  return digits.length === 10 ? `1${digits}` : digits;
-}
-
-function validPhoneNumber(phoneNumber) {
-  return !phoneNumber || /^\d{10,15}$/.test(phoneNumber);
-}
-
 /* CREATE ACCOUNT */
 router.post("/register", async (req, res) => {
   try {
     if (signupBlocked(req.ip)) return res.status(429).json({ error: "Too many sign-ups from this connection. Try again later." });
     if (!codeMatches(req.body.groupCode)) return res.status(403).json({ error: "Wrong group code. Ask the organizer for it." });
 
-    const username = cleanUsername(req.body.username);
-    const pin = String(req.body.pin || "");
-    const phoneNumber = normalizePhoneNumber(req.body.phoneNumber);
     // Texts only after the person ticks the box themselves (carrier rule), and only once a phone number is on file.
-    const smsOptIn = req.body.smsOptIn === true && !!phoneNumber;
-
-    if (!username) {
-      return res.status(400).json({
-        error: "Username must be 1 to 30 characters",
-      });
-    }
-
-    if (!validPin(pin)) {
-      return res.status(400).json({
-        error: "PIN must be exactly 4 digits",
-      });
-    }
-
-    // A phone number is required to create an account (texting itself stays optional: it needs the ticked box).
-    if (!phoneNumber || !validPhoneNumber(phoneNumber)) {
-      return res.status(400).json({
-        error: "Enter a valid mobile phone number",
-      });
-    }
-
-    const existing = await db.query(
-      `SELECT UID
-       FROM Users
-       WHERE LOWER(Username) = LOWER($1)`,
-      [username]
-    );
-
-    // A phone number belongs to one account: replies are matched to a player by phone.
-    if (phoneNumber) {
-      const taken = await db.query("SELECT 1 FROM Users WHERE PhoneNumber = $1", [phoneNumber]);
-      if (taken.rows.length) return res.status(409).json({ error: "That phone number is already used by another account" });
-    }
-
-    if (existing.rows.length > 0) {
-      return res.status(409).json({
-        error: "Username already exists",
-      });
-    }
-
-    const pinHash = await bcrypt.hash(pin, 12);
-
-    const { rows } = await db.query(
-      `INSERT INTO Users (Username, PinHash, PhoneNumber, SmsOptIn, SmsOptedInAt)
-       VALUES ($1, $2, $3, $4, CASE WHEN $4 THEN NOW() ELSE NULL END)
-       RETURNING UID, Username`,
-      [username, pinHash, phoneNumber, smsOptIn]
-    );
-
-    res.status(201).json({
-      uid: rows[0].uid,
-      username: rows[0].username,
-    });
+    const smsOptIn = req.body.smsOptIn === true && !!normalizePhoneNumber(req.body.phoneNumber);
+    res.status(201).json(await createAccount({ username: req.body.username, pin: req.body.pin, phoneNumber: req.body.phoneNumber, smsOptIn }));
   } catch (e) {
+    if (e instanceof AccountError) return res.status(e.status).json({ error: e.message });
     console.error("Register error:", e);
-    res.status(500).json({
-      error: e.message,
-    });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -220,11 +145,7 @@ router.delete("/:username", async (req, res) => {
       return res.status(401).json({ error: "Your PIN is incorrect" });
     }
 
-    await db.query("DELETE FROM GamePlayers WHERE UID = $1", [user.uid]);
-    await db.query("DELETE FROM SubGamePlayers WHERE UID = $1", [user.uid]);
-    await db.query("DELETE FROM ConversationParticipants WHERE UID = $1", [user.uid]);
-    await db.query("DELETE FROM Messages WHERE SenderUID = $1", [user.uid]);
-    await db.query("DELETE FROM Users WHERE UID = $1", [user.uid]);
+    await removeAccount(user.uid);
 
     res.json({ success: true });
   } catch (e) {

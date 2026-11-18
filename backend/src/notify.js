@@ -122,21 +122,28 @@ async function sendSchedule(gid, note) {
 async function sendDueReminders() {
   const now = new Date();
   const hours = Number((await require("./settings").getSettings()).reminder_hours) || 24;
+  // Claim the games first (the update is the claim), so a slow send or a second server instance cannot send them again.
   const { rows: games } = await db.query(
-    `SELECT GID FROM Games WHERE Status = 'scheduled' AND ReminderSentAt IS NULL AND GameTime > $1 AND GameTime <= $2`,
+    `UPDATE Games SET ReminderSentAt = NOW()
+     WHERE Status = 'scheduled' AND ReminderSentAt IS NULL AND GameTime > $1 AND GameTime <= $2 RETURNING GID`,
     [now, new Date(now.getTime() + hours * 3600 * 1000)]
   );
-  for (const { gid } of games) {
-    const { rows } = await db.query(
-      `SELECT ${ROW} FROM GamePlayers
-       JOIN Users ON Users.UID = GamePlayers.UID JOIN Games ON Games.GID = GamePlayers.GID
-       WHERE GamePlayers.GID = $1 AND GamePlayers.Status = 'selected'`,
-      [gid]
-    );
-    for (const r of rows) {
-      await sendSmsToUser(r, `BARnBoy Group: reminder, you're playing pickleball ${when(r.gametime)} at ${r.location}. Reply STOP to opt out.`, { kind: "reminder", gid });
-    }
-    await db.query("UPDATE Games SET ReminderSentAt = NOW() WHERE GID = $1", [gid]);
+  if (!games.length) return 0;
+  const { rows } = await db.query(
+    `SELECT ${ROW} FROM GamePlayers
+     JOIN Users ON Users.UID = GamePlayers.UID JOIN Games ON Games.GID = GamePlayers.GID
+     WHERE GamePlayers.GID = ANY($1::int[]) AND GamePlayers.Status = 'selected' ORDER BY Games.GameTime`,
+    [games.map((g) => g.gid)]
+  );
+  // One reminder per player, listing every game that is due, so nobody gets a separate text for each day.
+  const byPlayer = new Map();
+  for (const r of rows) byPlayer.set(r.uid, [...(byPlayer.get(r.uid) || []), r]);
+  for (const list of byPlayer.values()) {
+    const first = list[0];
+    const text = list.length === 1
+      ? `BARnBoy Group: reminder, you're playing pickleball ${when(first.gametime)} at ${first.location}. Reply STOP to opt out.`
+      : `BARnBoy Group: reminder, you're playing pickleball ${list.map((r) => `${when(r.gametime)} at ${r.location}`).join(" and ")}. Reply STOP to opt out.`;
+    await sendSmsToUser(first, text, { kind: "reminder", gid: first.gid });
   }
   return games.length;
 }

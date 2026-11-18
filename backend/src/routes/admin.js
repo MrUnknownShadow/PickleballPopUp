@@ -2,13 +2,17 @@ const express = require("express");
 const db = require("../db");
 const { requireAdmin } = require("../auth");
 const notify = require("../notify");
+const { AccountError, createAccount, removeAccount } = require("../accounts");
 
 const router = express.Router();
 router.use(requireAdmin);
 
 const intList = (v) => Array.isArray(v) && v.every(Number.isInteger) ? v : null;
 const noteOf = (v) => (typeof v === "string" ? v.slice(0, 300) : "");
-const fail = (res, e) => { console.error(e); res.status(500).json({ error: "Server error" }); };
+const fail = (res, e) => {
+  if (e instanceof AccountError) return res.status(e.status).json({ error: e.message });
+  console.error(e); res.status(500).json({ error: "Server error" });
+};
 
 /* ALL PLAYERS + THEIR STATUS FOR ONE EVENT */
 router.get("/games/:id/players", async (req, res) => {
@@ -48,6 +52,39 @@ router.post("/games/:id/select", async (req, res) => {
 router.post("/games/:id/schedule", async (req, res) => {
   try {
     res.json({ sent: await notify.sendSchedule(req.params.id, noteOf(req.body.note)) });
+  } catch (e) { fail(res, e); }
+});
+
+/* PLAYER MANAGEMENT: add and remove players without the sign-up flow (no group code; the admin is the invitation) */
+router.get("/players", async (_req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT Users.UID AS uid, Users.Username AS username, Users.PhoneNumber AS phone, Users.SmsOptIn AS smsoptin,
+              Users.IsAdmin AS isadmin, Users.CreatedAt AS createdat,
+              (SELECT COUNT(DISTINCT SubGamePlayers.SGID)::int FROM SubGamePlayers JOIN SubGames ON SubGames.SGID = SubGamePlayers.SGID
+               WHERE SubGamePlayers.UID = Users.UID AND SubGames.Status = 'completed') AS games
+       FROM Users ORDER BY LOWER(Users.Username)`
+    );
+    res.json(rows);
+  } catch (e) { fail(res, e); }
+});
+
+// Texts stay off for a player added here: only the player can consent (they tick the box in Settings or text START).
+router.post("/players", async (req, res) => {
+  try {
+    res.status(201).json(await createAccount({ username: req.body.username, pin: req.body.pin, phoneNumber: req.body.phoneNumber }));
+  } catch (e) { fail(res, e); }
+});
+
+router.delete("/players/:uid", async (req, res) => {
+  try {
+    const uid = Number(req.params.uid);
+    if (!Number.isInteger(uid)) return res.status(400).json({ error: "Bad player id" });
+    if (uid === req.user.uid) return res.status(400).json({ error: "You can't remove your own account here. Use Settings." });
+    const { rows } = await db.query("SELECT Username AS username FROM Users WHERE UID = $1", [uid]);
+    if (!rows[0]) return res.status(404).json({ error: "No such player" });
+    await removeAccount(uid);
+    res.json({ removed: rows[0].username });
   } catch (e) { fail(res, e); }
 });
 

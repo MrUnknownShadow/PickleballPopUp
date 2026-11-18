@@ -90,7 +90,8 @@ async function getWeek(weekStart) {
     "SELECT GID AS gid, PollDay AS day, GameTime AS gametime, Location AS location FROM Games WHERE PollWeek = $1", [weekStart]
   );
   const { rows: sel } = await db.query(
-    `SELECT Games.PollDay AS day, GamePlayers.UID AS uid FROM GamePlayers JOIN Games ON Games.GID = GamePlayers.GID
+    `SELECT Games.PollDay AS day, GamePlayers.UID AS uid, Users.Username AS username FROM GamePlayers
+     JOIN Games ON Games.GID = GamePlayers.GID JOIN Users ON Users.UID = GamePlayers.UID
      WHERE Games.PollWeek = $1 AND GamePlayers.Status = 'selected'`, [weekStart]
   );
   const chosen = new Set(sel.map((x) => `${x.day}:${x.uid}`));
@@ -100,9 +101,12 @@ async function getWeek(weekStart) {
   const answered = new Set(av.map((a) => a.uid));
   const days = Object.fromEntries(DAYS.map((d) => [d, []]));
   for (const a of av) if (a.status !== "unclear") for (const d of toList(a.days)) days[d]?.push({ uid: a.uid, username: a.username, confirmed: chosen.has(`${d}:${a.uid}`), late: a.late });
+  // Safety net: a picked player always shows under their day, whatever they replied, so a later Confirm cannot drop them.
+  for (const x of sel) if (!days[x.day]?.some((p) => p.uid === x.uid)) days[x.day]?.push({ uid: x.uid, username: x.username, confirmed: true, late: false });
+  const { rows: roster } = await db.query("SELECT UID AS uid, Username AS username, SmsOptIn AS smsoptin FROM Users ORDER BY LOWER(Username)");
   const s = await getSettings();
   return {
-    weekStart, range: range(weekStart), poll: pollRows[0] || null, settings: s, days,
+    roster, weekStart, range: range(weekStart), poll: pollRows[0] || null, settings: s, days,
     games: Object.fromEntries(DAYS.map((d) => { const g = games.find((x) => x.day === d); return [d, g ? { gid: g.gid, time: g.gametime, location: g.location } : null]; })),
     none: av.filter((a) => a.status === "none").map((a) => ({ uid: a.uid, username: a.username, late: a.late })),
     unclear: av.filter((a) => a.status === "unclear").map((a) => ({ uid: a.uid, username: a.username, raw: a.raw })),
@@ -156,8 +160,16 @@ async function confirmWeek(weekStart, input, adminName) {
         "INSERT INTO GamePlayers (GID, UID, Status) VALUES ($1, $2, $3) ON CONFLICT (GID, UID) DO UPDATE SET Status = EXCLUDED.Status",
         [gid, uid, uids.includes(uid) ? "selected" : "not_selected"]
       );
-      if (uids.includes(uid)) // a player the admin added by hand needs a row so the text below can find them
-        await db.query("INSERT INTO Availability (WeekStart, UID, Status) VALUES ($1, $2, 'manual') ON CONFLICT DO NOTHING", [weekStart, uid]);
+      if (uids.includes(uid)) { // a player picked by hand (a substitute, or someone who said no) must show as available that day
+        const { rows: cur } = await db.query("SELECT Days AS days FROM Availability WHERE WeekStart = $1 AND UID = $2", [weekStart, uid]);
+        const have = toList(cur[0]?.days);
+        if (!have.includes(d)) await db.query(
+          `INSERT INTO Availability (WeekStart, UID, Days, Status, Raw, UpdatedAt) VALUES ($1, $2, $3, 'manual', '(picked by admin)', NOW())
+           ON CONFLICT (WeekStart, UID) DO UPDATE SET Days = $3, UpdatedAt = NOW(),
+             Status = CASE WHEN Availability.Status IN ('days', 'manual') THEN Availability.Status ELSE 'manual' END`,
+          [weekStart, uid, toStr([...have, d])]
+        );
+      }
     }
     await db.query("UPDATE GamePlayers SET Status = 'not_selected' WHERE GID = $1 AND Status = 'selected' AND UID <> ALL($2::int[])", [gid, uids]);
   }
@@ -177,9 +189,14 @@ async function notifyConfirmed(weekStart) {
   let confirmed = 0, removed = 0;
   for (const r of rows) {
     if (r.now === r.notified) continue;
+    // Claim the change before texting, so two Confirms at the same moment cannot both send it.
+    const claimed = await db.query(
+      "UPDATE Availability SET NotifiedDays = $3 WHERE WeekStart = $1 AND UID = $2 AND NotifiedDays IS NOT DISTINCT FROM $4",
+      [weekStart, r.uid, r.now, r.notified]
+    );
+    if (!claimed.rowCount) continue;
     if (r.now) { await sendSmsToUser(r, fill(s.confirm_text, { days: dayList(toList(r.now)), link: link() }), { kind: "week_confirm" }); confirmed++; }
     else if (r.notified) { await sendSmsToUser(r, fill(s.removed_text, { days: dayList(toList(r.notified)), link: link() }), { kind: "week_confirm" }); removed++; }
-    await db.query("UPDATE Availability SET NotifiedDays = $3 WHERE WeekStart = $1 AND UID = $2", [weekStart, r.uid, r.now]);
   }
   return { confirmed, removed };
 }

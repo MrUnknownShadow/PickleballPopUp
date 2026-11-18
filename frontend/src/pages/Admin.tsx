@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useApi, useNotification } from '../hooks/useApi';
 import type { Game } from '../types';
 import AdminWeek from './AdminWeek';
+import AdminPlayers from './AdminPlayers';
 
 interface AdminPlayer { uid: number; username: string; smsoptin: boolean; phonelast4: string | null; status: string | null }
 interface OutboxRow { id: number; username: string | null; kind: string; direction: string; body: string; status: string; error: string | null; createdat: string }
@@ -188,17 +189,17 @@ function EventTexts() {
 
 export default function Admin() {
   const { isAdmin } = useAuth();
-  const [tab, setTab] = useState<'week' | 'event'>('week');
+  const [tab, setTab] = useState<'week' | 'event' | 'players'>('week');
   if (!isAdmin) return <div className="empty-state"><div className="empty-title">Admins only</div></div>;
-  const tabBtn = (id: 'week' | 'event', label: string) => (
+  const tabBtn = (id: 'week' | 'event' | 'players', label: string) => (
     <button role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`btn btn-block ${tab === id ? 'btn-primary' : 'btn-secondary'}`} style={{ minHeight: 44, justifyContent: 'center' }}>{label}</button>
   );
   return (
     <div className="fade-in">
-      <div className="page-title">Text Messaging</div>
-      <div className="page-subtitle">Weekly availability, schedule and texts</div>
-      <div role="tablist" style={{ display: 'flex', gap: 8, marginTop: 16 }}>{tabBtn('week', 'Weekly schedule')}{tabBtn('event', 'Single-event texts')}</div>
-      {tab === 'week' ? <AdminWeek /> : <EventTexts />}
+      <div className="page-title">Admin</div>
+      <div className="page-subtitle">Weekly schedule, texts and players</div>
+      <div role="tablist" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8, marginTop: 16 }}>{tabBtn('week', 'Weekly schedule')}{tabBtn('event', 'Single-event texts')}{tabBtn('players', 'Players')}</div>
+      {tab === 'week' ? <AdminWeek /> : tab === 'event' ? <EventTexts /> : <AdminPlayers />}
     </div>
   );
 }

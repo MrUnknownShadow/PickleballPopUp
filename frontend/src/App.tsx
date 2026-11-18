@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
+import PublicShell from './components/PublicShell';
 import Login from './pages/Login';
 import Events from './pages/Events';
 import EventDetail from './pages/EventDetail';
@@ -21,6 +22,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Signed in: the normal app frame. Not signed in: a plain public frame, for pages anyone can read.
+function MaybeLayout() {
+  const { username } = useAuth();
+  return username ? <Layout /> : <PublicShell />;
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -28,14 +35,16 @@ function AppRoutes() {
       <Route path="/schedule" element={<Schedule />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
+      <Route element={<MaybeLayout />}>
+        <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="/history" element={<Results />} />
+        <Route path="/history/:id" element={<SessionReport />} />
+      </Route>
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/events" replace />} />
         <Route path="events" element={<Events />} />
         <Route path="events/:id" element={<EventDetail />} />
         <Route path="calendar" element={<Calendar />} />
-        <Route path="leaderboard" element={<Leaderboard />} />
-        <Route path="history" element={<Results />} />
-        <Route path="history/:id" element={<SessionReport />} />
         <Route path="settings" element={<Settings />} />
         <Route path="admin" element={<Admin />} />
       </Route>
