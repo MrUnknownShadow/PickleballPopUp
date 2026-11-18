@@ -18,7 +18,7 @@ export function GameResultsTable({ games, onEdit }: { games: ReportGame[]; onEdi
         <table className="report-table report-games">
           <thead>
             <tr>
-              <th scope="col">#</th><th scope="col">Team 1</th><th scope="col">S1</th><th scope="col">S2</th><th scope="col">Team 2</th>
+              <th scope="col">#</th><th scope="col" title="Team 1 serves first">Team 1 (serves)</th><th scope="col">S1</th><th scope="col">S2</th><th scope="col">Team 2</th>
               {onEdit && <th scope="col" className="no-print"><span className="sr-only">Edit</span></th>}
             </tr>
           </thead>

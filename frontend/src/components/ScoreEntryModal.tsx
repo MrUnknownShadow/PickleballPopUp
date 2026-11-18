@@ -45,17 +45,17 @@ export default function ScoreEntryModal({ subGame, onClose, onEnded, apiFetch, c
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
             <div>
               <div style={{ background: 'var(--green-light)', borderRadius: 'var(--radius-md)', padding: '10px 12px', marginBottom: 8 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green-dark)', marginBottom: 4 }}>TEAM A</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green-dark)', marginBottom: 4 }}>TEAM 1 · SERVED FIRST</div>
                 <div style={{ fontSize: 13 }}>{subGame.team1.join(', ')}</div>
               </div>
-              <LabeledInput label="Team A score" type="number" min={0} max={99} value={team1score} onChange={setTeam1score} required />
+              <LabeledInput label="Team 1 score" type="number" min={0} max={99} value={team1score} onChange={setTeam1score} required />
             </div>
             <div>
               <div style={{ background: 'var(--yellow-light)', borderRadius: 'var(--radius-md)', padding: '10px 12px', marginBottom: 8 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--yellow-dark)', marginBottom: 4 }}>TEAM B</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--yellow-dark)', marginBottom: 4 }}>TEAM 2</div>
                 <div style={{ fontSize: 13 }}>{subGame.team2.join(', ')}</div>
               </div>
-              <LabeledInput label="Team B score" type="number" min={0} max={99} value={team2score} onChange={setTeam2score} required />
+              <LabeledInput label="Team 2 score" type="number" min={0} max={99} value={team2score} onChange={setTeam2score} required />
             </div>
           </div>
           {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 10 }}>{error}</div>}

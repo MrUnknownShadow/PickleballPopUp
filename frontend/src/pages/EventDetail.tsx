@@ -75,6 +75,21 @@ export default function EventDetail() {
 
   useEffect(() => { load(); }, [id]);
 
+  // During a session, quietly re-check the games so a court-side screen follows what the admin does on a phone:
+  // it switches to the timer when a game starts and back when the score is saved. Only the games list is replaced,
+  // and only when it changed, so nothing flashes and an open score form is never reset.
+  const liveStatus = event?.status ?? event?.Status;
+  useEffect(() => {
+    if (liveStatus !== 'in_progress') return;
+    const t = setInterval(async () => {
+      try {
+        const fresh = await apiFetch<SubGame[]>(`/api/games/${id}/subgames`);
+        setSubGames(prev => (JSON.stringify(prev) === JSON.stringify(fresh) ? prev : fresh));
+      } catch { /* offline for a moment: next tick */ }
+    }, 4000);
+    return () => clearInterval(t);
+  }, [id, liveStatus]);
+
   const handleJoin = async () => {
     try { await apiFetch(`/api/games/${id}/join`, { method: 'POST', body: JSON.stringify({ username }) }); show('Joined!', 'success'); load(); }
     catch (err) { show(err instanceof Error ? err.message : 'Error', 'error'); }
@@ -126,6 +141,7 @@ export default function EventDetail() {
   const isInProgress = status === 'in_progress';
   const isCompleted = status === 'completed';
   const isCreator = (event.createdby ?? event.CreatedBy) === username;
+  const canRun = isCreator || isAdmin; // start/end the session and its games (the server checks the same)
   const isJoined = players.some(p => (p.username ?? p.Username) === username);
   const location = event.location ?? event.Location ?? '';
   const gameTime = event.gametime ?? event.GameTime ?? '';
@@ -146,7 +162,7 @@ export default function EventDetail() {
   if (activeSubGame) {
     return (
       <>
-        <LiveGameTimer subGame={activeSubGame} onEndGame={isAdmin ? () => setScoringSubGame(activeSubGame) : undefined} isAdmin={isCreator} />
+        <LiveGameTimer subGame={activeSubGame} eventId={id!} apiFetch={apiFetch} onEndGame={isAdmin ? () => setScoringSubGame(activeSubGame) : undefined} isAdmin={isAdmin} />
         {scoringSubGame && (
           <ScoreEntryModal
             subGame={scoringSubGame}
@@ -180,16 +196,14 @@ export default function EventDetail() {
           {isScheduled && !isJoined && <button className="btn btn-primary btn-sm" onClick={handleJoin}>Join</button>}
           {isScheduled && isJoined && !isCreator && <button className="btn btn-danger btn-sm" onClick={handleLeave}>Leave</button>}
 
-          {isScheduled && isCreator && (
-            <>
-              <button className="btn btn-primary btn-sm" onClick={handleStartSession} disabled={players.length < 2}>
-                <Play size={13} /> Start Session
-              </button>
-              <button className="btn btn-danger btn-sm" onClick={handleDelete}><Trash2 size={14} /></button>
-            </>
+          {isScheduled && canRun && (
+            <button className="btn btn-primary btn-sm" onClick={handleStartSession} disabled={players.length < 2}>
+              <Play size={13} /> Start Session
+            </button>
           )}
+          {isScheduled && isCreator && <button className="btn btn-danger btn-sm" onClick={handleDelete} aria-label="Delete event"><Trash2 size={14} /></button>}
 
-          {isInProgress && isCreator && (
+          {isInProgress && canRun && (
             <>
               <button className="btn btn-primary btn-sm" onClick={() => setShowTeamPicker(true)} disabled={players.length < 2}>
                 + Start Game
@@ -277,7 +291,7 @@ export default function EventDetail() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {/* Start-session prompt */}
-        {isScheduled && isCreator && players.length >= 2 && (
+        {isScheduled && canRun && players.length >= 2 && (
           <div className="card" style={{ padding: '28px 24px', textAlign: 'center', borderStyle: 'dashed' }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🏓</div>
             <div style={{ fontWeight: 600, marginBottom: 4 }}>Ready to play!</div>
@@ -287,7 +301,7 @@ export default function EventDetail() {
         )}
 
         {/* Start-game prompt (session running, no games yet) */}
-        {isInProgress && isCreator && completedSubGames.length === 0 && (
+        {isInProgress && canRun && completedSubGames.length === 0 && (
           <div className="card" style={{ padding: '28px 24px', textAlign: 'center', borderStyle: 'dashed' }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🏓</div>
             <div style={{ fontWeight: 600, marginBottom: 4 }}>Session is live</div>
@@ -305,7 +319,7 @@ export default function EventDetail() {
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <Link to={`/history/${id}`} className="btn btn-secondary btn-sm">Results table</Link>
-                {isInProgress && isCreator && (
+                {isInProgress && canRun && (
                   <button className="btn btn-primary btn-sm" onClick={() => setShowTeamPicker(true)}>+ New Game</button>
                 )}
               </div>

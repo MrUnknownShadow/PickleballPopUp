@@ -22,6 +22,15 @@ router.use((req, res, next) => {
   requireUser(req, res, () => { req.body = { ...req.body, username: req.user.username }; next(); });
 });
 
+// Running a session (start it, start a game, end it) is for the event's host or a site admin, not any player.
+async function hostOrAdmin(req, res, next) {
+  if (req.user.isadmin) return next();
+  const { rows } = await db.query("SELECT CreatedBy FROM Games WHERE GID = $1", [req.params.id]).catch(() => ({ rows: [] }));
+  if (!rows[0]) return res.status(404).json({ error: "Game not found" });
+  if (rows[0].createdby !== req.user.username) return res.status(403).json({ error: "Only the host or an admin can do that" });
+  next();
+}
+
 /* GET ALL EVENTS */
 router.get("/", async (req, res) => {
   try {
@@ -214,6 +223,16 @@ router.post("/", async (req, res) => {
 });
 
 /* GET PLAYERS FOR EVENT */
+// Remote scream: an admin's phone bumps a counter per event and the big screen, which polls it, plays the sound.
+// ponytail: kept in memory, so a restart resets it; screens play on any change, so they just re-sync.
+const screams = new Map();
+router.get("/:id/scream", (req, res) => res.json({ count: screams.get(req.params.id) || 0 }));
+router.post("/:id/scream", requireAdmin, (req, res) => {
+  const count = (screams.get(req.params.id) || 0) + 1;
+  screams.set(req.params.id, count);
+  res.json({ count });
+});
+
 router.get("/:id/players", async (req, res) => {
   try {
     const { rows } = await db.query(`
@@ -386,7 +405,7 @@ router.post("/:id/delete", async (req, res) => {
 });
 
 /* START SESSION */
-router.post("/:id/start", async (req, res) => {
+router.post("/:id/start", hostOrAdmin, async (req, res) => {
   try {
     await db.query(
       "UPDATE Games SET Status = 'in_progress', StartedAt = NOW() WHERE GID = $1",
@@ -400,7 +419,7 @@ router.post("/:id/start", async (req, res) => {
 });
 
 /* START SUB-GAME (teams only, no score yet) */
-router.post("/:id/startgame", async (req, res) => {
+router.post("/:id/startgame", hostOrAdmin, async (req, res) => {
   try {
     const { team1, team2 } = req.body;
     const gameId = req.params.id;
@@ -486,7 +505,7 @@ router.put("/subgame/:sgid/score", requireAdmin, async (req, res) => {
 });
 
 /* END SESSION */
-router.post("/:id/end", async (req, res) => {
+router.post("/:id/end", hostOrAdmin, async (req, res) => {
   try {
     await db.query(
       "UPDATE Games SET Status = 'completed', EndedAt = NOW() WHERE GID = $1",

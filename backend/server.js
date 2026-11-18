@@ -50,13 +50,19 @@ if (fs.existsSync(dist)) {
 // Run schema on startup to create tables if they don't exist
 const db = require("./src/db");
 
-async function initDb() {
-  try {
-    const schema = fs.readFileSync(path.join(__dirname, "db/schema.sql"), "utf8");
-    await db.query(schema);
-    console.log("Database ready");
-  } catch (e) {
-    console.error("DB init error:", e.message);
+// Retries because a database that is still waking up (after a pause or resume) refuses the first connections.
+// If it never comes up, exit so the host restarts the server instead of running without the latest schema.
+async function initDb(tries = 10) {
+  const schema = fs.readFileSync(path.join(__dirname, "db/schema.sql"), "utf8");
+  for (let i = 1; ; i++) {
+    try {
+      await db.query(schema);
+      return console.log("Database ready");
+    } catch (e) {
+      console.error(`DB init error (try ${i}/${tries}):`, e.message);
+      if (i >= tries) process.exit(1);
+      await new Promise((r) => setTimeout(r, 3000));
+    }
   }
 }
 

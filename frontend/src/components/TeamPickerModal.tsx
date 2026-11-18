@@ -67,21 +67,21 @@ export default function TeamPickerModal({ players, onClose, onStarted, apiFetch,
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
             <div style={{ background: 'var(--green-light)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green-dark)', marginBottom: 8 }}>TEAM A</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green-dark)', marginBottom: 8 }}>TEAM 1 · SERVES FIRST</div>
               {team1.map(p => (
                 <div key={p} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ fontSize: 13 }}>{p}</span>
-                  <button onClick={() => togglePlayer(p, 1)} style={{ fontSize: 14, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+                  <button onClick={() => togglePlayer(p, 1)} aria-label={`Remove ${p}`} style={{ fontSize: 20, minWidth: 44, minHeight: 36, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
                 </div>
               ))}
               {team1.length === 0 && <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>No players yet</div>}
             </div>
             <div style={{ background: 'var(--yellow-light)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--yellow-dark)', marginBottom: 8 }}>TEAM B</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--yellow-dark)', marginBottom: 8 }}>TEAM 2</div>
               {team2.map(p => (
                 <div key={p} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ fontSize: 13 }}>{p}</span>
-                  <button onClick={() => togglePlayer(p, 2)} style={{ fontSize: 14, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+                  <button onClick={() => togglePlayer(p, 2)} aria-label={`Remove ${p}`} style={{ fontSize: 20, minWidth: 44, minHeight: 36, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
                 </div>
               ))}
               {team2.length === 0 && <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>No players yet</div>}
@@ -97,21 +97,21 @@ export default function TeamPickerModal({ players, onClose, onStarted, apiFetch,
                   <button
                     onClick={() => togglePlayer(name, 1)}
                     style={{
-                      padding: '4px 10px', borderRadius: 'var(--radius-sm)', fontSize: 12, cursor: 'pointer',
+                      padding: '10px 14px', minHeight: 44, borderRadius: 'var(--radius-sm)', fontSize: 14, cursor: 'pointer',
                       background: inT1 ? 'var(--green)' : 'var(--gray-100)',
                       color: inT1 ? 'white' : 'var(--gray-700)',
                       border: '1px solid', borderColor: inT1 ? 'var(--green)' : 'var(--gray-300)',
                     }}
-                  >A: {name}</button>
+                  >1: {name}</button>
                   <button
                     onClick={() => togglePlayer(name, 2)}
                     style={{
-                      padding: '4px 10px', borderRadius: 'var(--radius-sm)', fontSize: 12, cursor: 'pointer',
+                      padding: '10px 14px', minHeight: 44, borderRadius: 'var(--radius-sm)', fontSize: 14, cursor: 'pointer',
                       background: inT2 ? 'var(--yellow-dark)' : 'var(--gray-100)',
                       color: inT2 ? 'white' : 'var(--gray-700)',
                       border: '1px solid', borderColor: inT2 ? 'var(--yellow-dark)' : 'var(--gray-300)',
                     }}
-                  >B: {name}</button>
+                  >2: {name}</button>
                 </div>
               );
             })}

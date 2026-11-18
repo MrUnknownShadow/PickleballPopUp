@@ -14,7 +14,15 @@ const call = async (p, { method = "GET", body, token } = {}) => { if (process.en
   const g = (await call("/api/games", { token: tok[host] })).data.find((x) => x.location === `smoke ${run}`); assert(g, "event listed");
   for (const n of [p2, p3, p4, host]) assert.equal((await call(`/api/games/${g.gid}/join`, { method: "POST", token: tok[n] })).status, 200);
   assert.equal((await call(`/api/games/${g.gid}/players`)).data.length, 4);
+  // only the host or an admin runs the session; a player cannot start it or a game
+  assert.equal((await call(`/api/games/${g.gid}/start`, { method: "POST", token: tok[p2] })).status, 403);
   assert.equal((await call(`/api/games/${g.gid}/start`, { method: "POST", token: tok[host] })).status, 200);
+  assert.equal((await call(`/api/games/${g.gid}/startgame`, { method: "POST", token: tok[p2], body: { team1: [p2], team2: [p3] } })).status, 403);
+  // remote scream: admins only, and every screen sees the count go up
+  const before = (await call(`/api/games/${g.gid}/scream`)).data.count;
+  assert.equal((await call(`/api/games/${g.gid}/scream`, { method: "POST", token: tok[host] })).status, 403);
+  assert.equal((await call(`/api/games/${g.gid}/scream`, { method: "POST", token: tok[admin] })).status, 200);
+  assert.equal((await call(`/api/games/${g.gid}/scream`)).data.count, before + 1);
   const sg = await call(`/api/games/${g.gid}/startgame`, { method: "POST", token: tok[host], body: { team1: [host, p2], team2: [p3, p4], durationMinutes: 15 } }); assert.equal(sg.status, 200, JSON.stringify(sg.data));
   const sgid = sg.data.sgid ?? sg.data.sgId ?? sg.data.SGID ?? (await call(`/api/games/${g.gid}/subgames`)).data[0].sgid;
   // only a site admin records or corrects a score (not the host, not a player)

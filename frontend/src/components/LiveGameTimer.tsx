@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { SubGame } from '../types';
-import { playScream, unlockAudio } from './scream';
+import { playScream, unlockAudio, audioLocked } from './scream';
 
 
 function formatElapsed(ms: number): string {
@@ -14,12 +14,41 @@ function formatElapsed(ms: number): string {
 
 interface LiveGameTimerProps {
   subGame: SubGame;
+  eventId: string;
+  apiFetch: <T = unknown>(path: string, options?: RequestInit) => Promise<T>;
   onEndGame?: () => void; // only site admins record scores; without it players see a waiting note
   isAdmin?: boolean;
 }
 
-export default function LiveGameTimer({ subGame, onEndGame, isAdmin }: LiveGameTimerProps) {
+export default function LiveGameTimer({ subGame, eventId, apiFetch, onEndGame, isAdmin }: LiveGameTimerProps) {
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [locked, setLocked] = useState(audioLocked);
+  const seen = useRef<number | null>(null); // last remote-scream count this screen has handled
+
+  // Remote scream: every screen on this event polls the count and screams when it changes.
+  // The first answer is only a baseline, so opening the page never screams.
+  useEffect(() => {
+    let stop = false;
+    const poll = async () => {
+      try {
+        const { count } = await apiFetch<{ count: number }>(`/api/games/${eventId}/scream`);
+        if (stop) return;
+        if (seen.current !== null && count !== seen.current) void playScream();
+        seen.current = count;
+      } catch { /* offline for a moment: try again next tick */ }
+    };
+    poll();
+    const t = setInterval(poll, 2000);
+    return () => { stop = true; clearInterval(t); };
+  }, [eventId]);
+
+  const scream = async () => {
+    void playScream(); // the screen that was tapped plays it straight away
+    try { seen.current = (await apiFetch<{ count: number }>(`/api/games/${eventId}/scream`, { method: 'POST' })).count; }
+    catch { /* the other screens just miss this one */ }
+  };
+
+  const enableSound = () => { unlockAudio(); setTimeout(() => setLocked(audioLocked()), 300); };
 
   useEffect(() => {
     if (!subGame.startedat) return;
@@ -36,8 +65,8 @@ export default function LiveGameTimer({ subGame, onEndGame, isAdmin }: LiveGameT
   const overThreshold = elapsedMs >= thresholdMs;
 
   useEffect(() => {
-    window.addEventListener('pointerdown', unlockAudio, { once: true });
-    return () => window.removeEventListener('pointerdown', unlockAudio);
+    window.addEventListener('pointerdown', enableSound, { once: true });
+    return () => window.removeEventListener('pointerdown', enableSound);
   }, []);
 
   // Keep the screen awake while a game is running. Browsers drop the lock whenever the
@@ -77,7 +106,7 @@ export default function LiveGameTimer({ subGame, onEndGame, isAdmin }: LiveGameT
 
   // Scream once when the timer crosses the threshold (not on mid-game page loads past it).
   useEffect(() => {
-    if (overThreshold && elapsedMs < thresholdMs + 5000) playScream();
+    if (overThreshold && elapsedMs < thresholdMs + 5000) void playScream();
   }, [overThreshold]);
 
   return (
@@ -89,8 +118,9 @@ export default function LiveGameTimer({ subGame, onEndGame, isAdmin }: LiveGameT
         Game in progress
       </div>
 
+      {/* Sized to the screen so a court-side iPad shows it as big as it can */}
       <div style={{
-        fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 96, lineHeight: 1,
+        fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(72px, min(26vw, 38vh), 360px)', lineHeight: 1,
         color: overThreshold ? 'var(--danger)' : 'var(--white)',
         fontVariantNumeric: 'tabular-nums',
       }}>
@@ -98,8 +128,14 @@ export default function LiveGameTimer({ subGame, onEndGame, isAdmin }: LiveGameT
       </div>
 
       {isAdmin && (
-        <button onClick={playScream} className="btn btn-secondary btn-lg">
+        <button onClick={scream} className="btn btn-secondary btn-lg">
           Scream
+        </button>
+      )}
+
+      {locked && (
+        <button onClick={enableSound} className="btn btn-secondary" style={{ position: 'absolute', top: 16, right: 16 }}>
+          Tap to turn on sound
         </button>
       )}
 

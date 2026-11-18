@@ -257,7 +257,8 @@ input, select, textarea { font-family: inherit; }
 .report-subtitle { text-align: center; font-size: 13px; color: #444; margin: 6px 0 18px; text-transform: capitalize; }
 .report-heading { font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 700; margin: 26px 0 10px; }
 .report-block { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.report-scroll { max-width: 100%; overflow-x: auto; margin: 0 auto; width: fit-content; }
+/* position: relative keeps hidden screen-reader labels inside the scroll box, so they cannot widen the page */
+.report-scroll { position: relative; max-width: 100%; overflow-x: auto; margin: 0 auto; width: fit-content; }
 .report-table { border-collapse: collapse; font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; }
 .report-table th, .report-table td { border: 1px solid #9aa3ad; padding: 5px 10px; white-space: nowrap; }
 .report-table thead th { background: #2e4057; color: #fff; font-weight: 700; }
@@ -275,10 +276,11 @@ input, select, textarea { font-family: inherit; }
 .report-legend td { border: 1px solid #9aa3ad; padding: 3px 4px; }
 .report-legend .swatch { width: 18px; }
 .report-edit { font-size: 11px; color: var(--green); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 2px 4px; }
+@media (pointer: coarse) { .report-edit { font-size: 13px; padding: 8px 10px; } } /* finger-sized on the iPad */
 .results-range { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-bottom: 20px; }
 .results-range label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: var(--gray-700); }
 .results-range .settings-input { width: auto; padding: 6px 8px; }
-@media (max-width: 768px) {
+@media (max-width: 1024px) { /* phones and iPads: next to the sidebar the report gets about 500px */
   .report-page { padding: 20px 12px 24px; border-radius: var(--radius-md); }
   .report-games { min-width: 0; }
   .report-table th, .report-table td { padding: 5px 6px; }
