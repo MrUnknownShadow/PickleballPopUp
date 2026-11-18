@@ -43,15 +43,16 @@ export default function ScoreEntryModal({ subGame, onClose, onEnded, apiFetch, c
         <div className="modal-title" id="score-title">{correcting ? 'Correct Score' : 'Enter Final Score'}</div>
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-            <div>
-              <div style={{ background: 'var(--green-light)', borderRadius: 'var(--radius-md)', padding: '10px 12px', marginBottom: 8 }}>
+            {/* columns stretch and the team cards grow, so both score boxes line up even when a label wraps */}
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ flex: 1, background: 'var(--green-light)', borderRadius: 'var(--radius-md)', padding: '10px 12px', marginBottom: 8 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green-dark)', marginBottom: 4 }}>TEAM 1 · SERVED FIRST</div>
                 <div style={{ fontSize: 13 }}>{subGame.team1.join(', ')}</div>
               </div>
               <LabeledInput label="Team 1 score" type="number" min={0} max={99} value={team1score} onChange={setTeam1score} required />
             </div>
-            <div>
-              <div style={{ background: 'var(--yellow-light)', borderRadius: 'var(--radius-md)', padding: '10px 12px', marginBottom: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ flex: 1, background: 'var(--yellow-light)', borderRadius: 'var(--radius-md)', padding: '10px 12px', marginBottom: 8 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--yellow-dark)', marginBottom: 4 }}>TEAM 2</div>
                 <div style={{ fontSize: 13 }}>{subGame.team2.join(', ')}</div>
               </div>
